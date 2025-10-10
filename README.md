@@ -303,6 +303,28 @@ curl --location 'http://localhost:8000/api/tts' \
 --output speech.mp3
 ```
 
+## PPT 下载
+
+DeerFlow 支持将研究报告导出为 PPT 文件。要启用该能力，请完成以下步骤：
+
+1. 安装 [Marp CLI](https://github.com/marp-team/marp-cli)，并确保 `marp` 命令位于 PATH 中。例如：
+   ```bash
+   brew install marp-cli                       # macOS
+   # 或使用 npm/pnpm 全局安装
+   npm install -g @marp-team/marp-cli
+   # 验证安装是否生效
+   marp --version
+   ```
+2. 在后端启动前填好 `.env` 与 `conf.yaml` 中的模型配置，`ppt_composer` 会默认使用 `BASIC_MODEL` 对应的 LLM 生成幻灯片内容。
+3. 启动服务后，可通过调用 `/api/ppt/generate` 接口获取 PPT：
+   ```bash
+   curl -X POST http://localhost:8000/api/ppt/generate \
+     -H "Content-Type: application/json" \
+     -d '{"content": "这里替换为研究报告的 Markdown 正文"}' \
+     --output report.pptx
+   ```
+   接口会返回二进制流，保存成 `report.pptx` 即可下载。当前 Web UI 尚未提供按钮，可通过上述方式或自行集成前端调用。
+
 ## 开发
 
 ### 测试
