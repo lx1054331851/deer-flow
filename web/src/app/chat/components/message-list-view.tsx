@@ -418,7 +418,14 @@ function ThoughtBlock({
   );
 }
 
-const GREETINGS = ["Cool", "Sounds great", "Looks good", "Great", "Awesome"];
+const DEFAULT_ACCEPT_GREETINGS = [
+  "Cool",
+  "Sounds great",
+  "Looks good",
+  "Great",
+  "Awesome",
+];
+const DEFAULT_ACCEPT_MESSAGES = ["Let's get started.", "Let's start."];
 function PlanCard({
   className,
   message,
@@ -457,15 +464,39 @@ function PlanCard({
   // 判断是否应该显示计划：有主要内容就显示（无论是否还在流式传输）
   const shouldShowPlan = hasMainContent;
   const handleAccept = useCallback(async () => {
-    if (onSendMessage) {
-      onSendMessage(
-        `${GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}! ${Math.random() > 0.5 ? "Let's get started." : "Let's start."}`,
-        {
-          interruptFeedback: "accepted",
-        },
-      );
+    if (!onSendMessage) {
+      return;
     }
-  }, [onSendMessage]);
+    const greetings = t.raw("planCard.acceptGreetings") as string[] | undefined;
+    const starts = t.raw("planCard.acceptMessages") as string[] | undefined;
+    const greetingOptions =
+      Array.isArray(greetings) && greetings.length > 0
+        ? greetings
+        : DEFAULT_ACCEPT_GREETINGS;
+    const startOptions =
+      Array.isArray(starts) && starts.length > 0
+        ? starts
+        : DEFAULT_ACCEPT_MESSAGES;
+    const greeting =
+      greetingOptions[Math.floor(Math.random() * greetingOptions.length)];
+    const start = startOptions[Math.floor(Math.random() * startOptions.length)];
+    onSendMessage(`${greeting}! ${start}`, {
+      interruptFeedback: "accepted",
+    });
+  }, [onSendMessage, t]);
+
+  const getOptionLabel = useCallback(
+    (option: Option) => {
+      if (option.value === "edit_plan") {
+        return t("planCard.options.editPlan");
+      }
+      if (option.value === "accepted") {
+        return t("planCard.options.startResearch");
+      }
+      return option.text;
+    },
+    [t],
+  );
   return (
     <div className={cn("w-full", className)}>
       {reasoningContent && (
@@ -560,7 +591,7 @@ function PlanCard({
                         }
                       }}
                     >
-                      {option.text}
+                      {getOptionLabel(option)}
                     </Button>
                   ))}
                 </motion.div>

@@ -112,6 +112,20 @@
       "researching": "Researching...",
       "generatingReport": "Generating report...",
       "reportGenerated": "Report generated",
+      "planCard": {
+        "acceptGreetings": [
+          "Cool",
+          "Sounds great",
+          "Looks good",
+          "Great",
+          "Awesome"
+        ],
+        "acceptMessages": ["Let's get started.", "Let's start."],
+        "options": {
+          "editPlan": "Edit plan",
+          "startResearch": "Start research"
+        }
+      },
       "open": "Open",
       "close": "Close",
       "deepThinking": "Deep Thinking",
