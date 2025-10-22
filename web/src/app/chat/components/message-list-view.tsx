@@ -314,11 +314,13 @@ function ThoughtBlock({
   content,
   isStreaming,
   hasMainContent,
+  contentChunks,
 }: {
   className?: string;
   content: string;
   isStreaming?: boolean;
   hasMainContent?: boolean;
+  contentChunks?: string[];
 }) {
   const t = useTranslations("chat.research");
   const [isOpen, setIsOpen] = useState(true);
@@ -335,6 +337,12 @@ function ThoughtBlock({
   if (!content || content.trim() === "") {
     return null;
   }
+
+  // Split content into static (previous chunks) and streaming (current chunk)
+  const chunks = contentChunks ?? [];
+  const staticContent = chunks.slice(0, -1).join("");
+  const streamingChunk = isStreaming && chunks.length > 0 ? (chunks[chunks.length - 1] ?? "") : "";
+  const hasStreamingContent = isStreaming && streamingChunk.length > 0;
 
   return (
     <div className={cn("mb-6 w-full", className)}>
@@ -399,15 +407,39 @@ function ThoughtBlock({
                   scrollShadow={false}
                   autoScrollToBottom
                 >
-                  <Markdown
-                    className={cn(
-                      "prose dark:prose-invert max-w-none transition-colors duration-200",
-                      isStreaming ? "prose-primary" : "opacity-80",
-                    )}
-                    animated={isStreaming}
-                  >
-                    {content}
-                  </Markdown>
+                  {staticContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        "opacity-80",
+                      )}
+                      animated={false}
+                    >
+                      {staticContent}
+                    </Markdown>
+                  )}
+                  {hasStreamingContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        "prose-primary",
+                      )}
+                      animated={true}
+                    >
+                      {streamingChunk}
+                    </Markdown>
+                  )}
+                  {!hasStreamingContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        isStreaming ? "prose-primary" : "opacity-80",
+                      )}
+                      animated={false}
+                    >
+                      {content}
+                    </Markdown>
+                  )}
                 </ScrollContainer>
               </div>
             </CardContent>
@@ -418,14 +450,7 @@ function ThoughtBlock({
   );
 }
 
-const DEFAULT_ACCEPT_GREETINGS = [
-  "Cool",
-  "Sounds great",
-  "Looks good",
-  "Great",
-  "Awesome",
-];
-const DEFAULT_ACCEPT_MESSAGES = ["Let's get started.", "Let's start."];
+const GREETINGS = ["Cool", "Sounds great", "Looks good", "Great", "Awesome"];
 function PlanCard({
   className,
   message,
@@ -464,39 +489,15 @@ function PlanCard({
   // 判断是否应该显示计划：有主要内容就显示（无论是否还在流式传输）
   const shouldShowPlan = hasMainContent;
   const handleAccept = useCallback(async () => {
-    if (!onSendMessage) {
-      return;
+    if (onSendMessage) {
+      onSendMessage(
+        `${GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}! ${Math.random() > 0.5 ? "Let's get started." : "Let's start."}`,
+        {
+          interruptFeedback: "accepted",
+        },
+      );
     }
-    const greetings = t.raw("planCard.acceptGreetings") as string[] | undefined;
-    const starts = t.raw("planCard.acceptMessages") as string[] | undefined;
-    const greetingOptions =
-      Array.isArray(greetings) && greetings.length > 0
-        ? greetings
-        : DEFAULT_ACCEPT_GREETINGS;
-    const startOptions =
-      Array.isArray(starts) && starts.length > 0
-        ? starts
-        : DEFAULT_ACCEPT_MESSAGES;
-    const greeting =
-      greetingOptions[Math.floor(Math.random() * greetingOptions.length)];
-    const start = startOptions[Math.floor(Math.random() * startOptions.length)];
-    onSendMessage(`${greeting}! ${start}`, {
-      interruptFeedback: "accepted",
-    });
-  }, [onSendMessage, t]);
-
-  const getOptionLabel = useCallback(
-    (option: Option) => {
-      if (option.value === "edit_plan") {
-        return t("planCard.options.editPlan");
-      }
-      if (option.value === "accepted") {
-        return t("planCard.options.startResearch");
-      }
-      return option.text;
-    },
-    [t],
-  );
+  }, [onSendMessage]);
   return (
     <div className={cn("w-full", className)}>
       {reasoningContent && (
@@ -504,6 +505,7 @@ function PlanCard({
           content={reasoningContent}
           isStreaming={isThinking}
           hasMainContent={hasMainContent}
+          contentChunks={message.reasoningContentChunks}
         />
       )}
       {shouldShowPlan && (
@@ -515,7 +517,7 @@ function PlanCard({
           <Card className="w-full">
             <CardHeader>
               <CardTitle>
-                <Markdown animated={message.isStreaming}>
+                <Markdown animated={false}>
                   {`### ${
                     plan.title !== undefined && plan.title !== ""
                       ? plan.title
@@ -526,7 +528,7 @@ function PlanCard({
             </CardHeader>
             <CardContent>
               <div style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
-                <Markdown className="opacity-80" animated={message.isStreaming}>
+                <Markdown className="opacity-80" animated={false}>
                   {plan.thought}
                 </Markdown>
                 {plan.steps && (
@@ -536,7 +538,7 @@ function PlanCard({
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
                             <h3 className="mb flex items-center gap-2 text-lg font-medium">
-                              <Markdown animated={message.isStreaming}>
+                              <Markdown animated={false}>
                                 {step.title}
                               </Markdown>
                               {step.tools && step.tools.length > 0 && (
@@ -551,7 +553,7 @@ function PlanCard({
                               )}
                             </h3>
                             <div className="text-muted-foreground text-sm" style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
-                              <Markdown animated={message.isStreaming}>
+                              <Markdown animated={false}>
                                 {step.description}
                               </Markdown>
                             </div>
@@ -591,7 +593,7 @@ function PlanCard({
                         }
                       }}
                     >
-                      {getOptionLabel(option)}
+                      {option.text}
                     </Button>
                   ))}
                 </motion.div>

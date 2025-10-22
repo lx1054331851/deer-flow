@@ -11,8 +11,9 @@ from langchain_tavily._utilities import TAVILY_API_URL
 from langchain_tavily.tavily_search import (
     TavilySearchAPIWrapper as OriginalTavilySearchAPIWrapper,
 )
-from src.tools.search_postprocessor import SearchResultPostProcessor
+
 from src.config import load_yaml_config
+from src.tools.search_postprocessor import SearchResultPostProcessor
 
 
 def get_search_config():
@@ -113,8 +114,8 @@ class EnhancedTavilySearchAPIWrapper(OriginalTavilySearchAPIWrapper):
         images = raw_results["images"]
         for image in images:
             clean_result = {
-                "type": "image",
-                "image_url": image["url"],
+                "type": "image_url",
+                "image_url": {"url": image["url"]},
                 "image_description": image["description"],
             }
             clean_results.append(clean_result)

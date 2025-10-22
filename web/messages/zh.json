@@ -36,6 +36,9 @@
     "general": {
       "title": "通用",
       "autoAcceptPlan": "允许自动接受计划",
+      "enableClarification": "允许澄清",
+      "maxClarificationRounds": "最大澄清回合数",
+      "maxClarificationRoundsDescription": "启用澄清时允许的最大澄清回合数，默认是3。",
       "maxPlanIterations": "最大计划迭代次数",
       "maxPlanIterationsDescription": "设置为 1 进行单步规划。设置为 2 或更多以启用重新规划。",
       "maxStepsOfPlan": "研究计划的最大步骤数",
@@ -112,20 +115,6 @@
       "researching": "研究中...",
       "generatingReport": "生成报告中...",
       "reportGenerated": "报告已生成",
-      "planCard": {
-        "acceptGreetings": [
-          "太棒了",
-          "听起来不错",
-          "看起来很好",
-          "很好",
-          "棒极了"
-        ],
-        "acceptMessages": ["让我们开始吧。", "现在就开始吧。"],
-        "options": {
-          "editPlan": "编辑计划",
-          "startResearch": "开始调研"
-        }
-      },
       "open": "打开",
       "close": "关闭",
       "deepThinking": "深度思考",
