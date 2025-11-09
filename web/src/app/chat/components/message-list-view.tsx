@@ -43,7 +43,7 @@ import {
   useLastFeedbackMessageId,
   useLastInterruptMessage,
   useMessage,
-  useMessageIds,
+  useRenderableMessageIds,
   useResearchMessage,
   useStore,
 } from "~/core/store";
@@ -63,7 +63,8 @@ export function MessageListView({
   ) => void;
 }) {
   const scrollContainerRef = useRef<ScrollContainerRef>(null);
-  const messageIds = useMessageIds();
+  // Use renderable message IDs to avoid React key warnings from duplicate or non-rendering messages
+  const messageIds = useRenderableMessageIds();
   const interruptMessage = useLastInterruptMessage();
   const waitingForFeedbackMessageId = useLastFeedbackMessageId();
   const responding = useStore((state) => state.responding);
@@ -314,11 +315,13 @@ function ThoughtBlock({
   content,
   isStreaming,
   hasMainContent,
+  contentChunks,
 }: {
   className?: string;
   content: string;
   isStreaming?: boolean;
   hasMainContent?: boolean;
+  contentChunks?: string[];
 }) {
   const t = useTranslations("chat.research");
   const [isOpen, setIsOpen] = useState(true);
@@ -335,6 +338,12 @@ function ThoughtBlock({
   if (!content || content.trim() === "") {
     return null;
   }
+
+  // Split content into static (previous chunks) and streaming (current chunk)
+  const chunks = contentChunks ?? [];
+  const staticContent = chunks.slice(0, -1).join("");
+  const streamingChunk = isStreaming && chunks.length > 0 ? (chunks[chunks.length - 1] ?? "") : "";
+  const hasStreamingContent = isStreaming && streamingChunk.length > 0;
 
   return (
     <div className={cn("mb-6 w-full", className)}>
@@ -399,15 +408,39 @@ function ThoughtBlock({
                   scrollShadow={false}
                   autoScrollToBottom
                 >
-                  <Markdown
-                    className={cn(
-                      "prose dark:prose-invert max-w-none transition-colors duration-200",
-                      isStreaming ? "prose-primary" : "opacity-80",
-                    )}
-                    animated={isStreaming}
-                  >
-                    {content}
-                  </Markdown>
+                  {staticContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        "opacity-80",
+                      )}
+                      animated={false}
+                    >
+                      {staticContent}
+                    </Markdown>
+                  )}
+                  {hasStreamingContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        "prose-primary",
+                      )}
+                      animated={true}
+                    >
+                      {streamingChunk}
+                    </Markdown>
+                  )}
+                  {!hasStreamingContent && (
+                    <Markdown
+                      className={cn(
+                        "prose dark:prose-invert max-w-none transition-colors duration-200",
+                        isStreaming ? "prose-primary" : "opacity-80",
+                      )}
+                      animated={false}
+                    >
+                      {content}
+                    </Markdown>
+                  )}
                 </ScrollContainer>
               </div>
             </CardContent>
@@ -504,6 +537,7 @@ function PlanCard({
           content={reasoningContent}
           isStreaming={isThinking}
           hasMainContent={hasMainContent}
+          contentChunks={message.reasoningContentChunks}
         />
       )}
       {shouldShowPlan && (
@@ -515,7 +549,7 @@ function PlanCard({
           <Card className="w-full">
             <CardHeader>
               <CardTitle>
-                <Markdown animated={message.isStreaming}>
+                <Markdown animated={false}>
                   {`### ${
                     plan.title !== undefined && plan.title !== ""
                       ? plan.title
@@ -526,7 +560,7 @@ function PlanCard({
             </CardHeader>
             <CardContent>
               <div style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
-                <Markdown className="opacity-80" animated={message.isStreaming}>
+                <Markdown className="opacity-80" animated={false}>
                   {plan.thought}
                 </Markdown>
                 {plan.steps && (
@@ -536,7 +570,7 @@ function PlanCard({
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
                             <h3 className="mb flex items-center gap-2 text-lg font-medium">
-                              <Markdown animated={message.isStreaming}>
+                              <Markdown animated={false}>
                                 {step.title}
                               </Markdown>
                               {step.tools && step.tools.length > 0 && (
@@ -551,7 +585,7 @@ function PlanCard({
                               )}
                             </h3>
                             <div className="text-muted-foreground text-sm" style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
-                              <Markdown animated={message.isStreaming}>
+                              <Markdown animated={false}>
                                 {step.description}
                               </Markdown>
                             </div>

@@ -7,7 +7,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "Usage: make <target>"
 
-install-dev: ## Install development dependencies
+install-dev: ## Install development dependencies which could be optional for normal usage
 	uv pip install -e ".[dev]" && uv pip install -e ".[test]"
 
 format: ## Format code using ruff
@@ -16,16 +16,17 @@ format: ## Format code using ruff
 lint: ## Lint and fix code using ruff
 	uv run ruff check --fix --select I --config pyproject.toml .
 
-lint-frontend: ## Lint frontend code and check build
+lint-frontend: ## Lint frontend code, run tests, and check build
 	cd web && pnpm install --frozen-lockfile
 	cd web && pnpm lint
 	cd web && pnpm typecheck
+	cd web && pnpm test:run
 	cd web && pnpm build
 
 serve: ## Start development server with reload
 	uv run server.py --reload
 
-test: ## Run tests with pytest
+test: ## Run tests with pytest, need to run after 'make install-dev' for first time
 	uv run pytest tests/
 
 langgraph-dev: ## Start langgraph development server

@@ -136,7 +136,7 @@ def test_background_investigation_node_malformed_response(
 
         # Parse and verify the JSON content
         results = result["background_investigation_results"]
-        assert json.loads(results) is None
+        assert json.loads(results) == []
 
 
 @pytest.fixture
@@ -416,52 +416,79 @@ def mock_state_base():
     }
 
 
-def test_human_feedback_node_auto_accepted(monkeypatch, mock_state_base):
+def test_human_feedback_node_auto_accepted(monkeypatch, mock_state_base, mock_config):
     # auto_accepted_plan True, should skip interrupt and parse plan
     state = dict(mock_state_base)
     state["auto_accepted_plan"] = True
-    result = human_feedback_node(state)
+    result = human_feedback_node(state, mock_config)
     assert isinstance(result, Command)
     assert result.goto == "research_team"
     assert result.update["plan_iterations"] == 1
     assert result.update["current_plan"]["has_enough_context"] is False
 
 
-def test_human_feedback_node_edit_plan(monkeypatch, mock_state_base):
+def test_human_feedback_node_edit_plan(monkeypatch, mock_state_base, mock_config):
     # interrupt returns [EDIT_PLAN]..., should return Command to planner
     state = dict(mock_state_base)
     state["auto_accepted_plan"] = False
     with patch("src.graph.nodes.interrupt", return_value="[EDIT_PLAN] Please revise"):
-        result = human_feedback_node(state)
+        result = human_feedback_node(state, mock_config)
         assert isinstance(result, Command)
         assert result.goto == "planner"
         assert result.update["messages"][0].name == "feedback"
         assert "[EDIT_PLAN]" in result.update["messages"][0].content
 
 
-def test_human_feedback_node_accepted(monkeypatch, mock_state_base):
+def test_human_feedback_node_accepted(monkeypatch, mock_state_base, mock_config):
     # interrupt returns [ACCEPTED]..., should proceed to parse plan
     state = dict(mock_state_base)
     state["auto_accepted_plan"] = False
     with patch("src.graph.nodes.interrupt", return_value="[ACCEPTED] Looks good!"):
-        result = human_feedback_node(state)
+        result = human_feedback_node(state, mock_config)
         assert isinstance(result, Command)
         assert result.goto == "research_team"
         assert result.update["plan_iterations"] == 1
         assert result.update["current_plan"]["has_enough_context"] is False
 
 
-def test_human_feedback_node_invalid_interrupt(monkeypatch, mock_state_base):
-    # interrupt returns something else, should raise TypeError
+def test_human_feedback_node_invalid_interrupt(
+    monkeypatch, mock_state_base, mock_config
+):
+    # interrupt returns something else, should gracefully return to planner (not raise TypeError)
     state = dict(mock_state_base)
     state["auto_accepted_plan"] = False
     with patch("src.graph.nodes.interrupt", return_value="RANDOM_FEEDBACK"):
-        with pytest.raises(TypeError):
-            human_feedback_node(state)
+        result = human_feedback_node(state, mock_config)
+        assert isinstance(result, Command)
+        assert result.goto == "planner"
+
+
+def test_human_feedback_node_none_feedback(
+    monkeypatch, mock_state_base, mock_config
+):
+    # interrupt returns None, should gracefully return to planner
+    state = dict(mock_state_base)
+    state["auto_accepted_plan"] = False
+    with patch("src.graph.nodes.interrupt", return_value=None):
+        result = human_feedback_node(state, mock_config)
+        assert isinstance(result, Command)
+        assert result.goto == "planner"
+
+
+def test_human_feedback_node_empty_feedback(
+    monkeypatch, mock_state_base, mock_config
+):
+    # interrupt returns empty string, should gracefully return to planner
+    state = dict(mock_state_base)
+    state["auto_accepted_plan"] = False
+    with patch("src.graph.nodes.interrupt", return_value=""):
+        result = human_feedback_node(state, mock_config)
+        assert isinstance(result, Command)
+        assert result.goto == "planner"
 
 
 def test_human_feedback_node_json_decode_error_first_iteration(
-    monkeypatch, mock_state_base
+    monkeypatch, mock_state_base, mock_config
 ):
     # repair_json_output returns bad json, json.loads raises JSONDecodeError, plan_iterations=0
     state = dict(mock_state_base)
@@ -470,13 +497,13 @@ def test_human_feedback_node_json_decode_error_first_iteration(
     with patch(
         "src.graph.nodes.json.loads", side_effect=json.JSONDecodeError("err", "doc", 0)
     ):
-        result = human_feedback_node(state)
+        result = human_feedback_node(state, mock_config)
         assert isinstance(result, Command)
         assert result.goto == "__end__"
 
 
 def test_human_feedback_node_json_decode_error_second_iteration(
-    monkeypatch, mock_state_base
+    monkeypatch, mock_state_base, mock_config
 ):
     # repair_json_output returns bad json, json.loads raises JSONDecodeError, plan_iterations>0
     state = dict(mock_state_base)
@@ -485,12 +512,14 @@ def test_human_feedback_node_json_decode_error_second_iteration(
     with patch(
         "src.graph.nodes.json.loads", side_effect=json.JSONDecodeError("err", "doc", 0)
     ):
-        result = human_feedback_node(state)
+        result = human_feedback_node(state, mock_config)
         assert isinstance(result, Command)
         assert result.goto == "reporter"
 
 
-def test_human_feedback_node_not_enough_context(monkeypatch, mock_state_base):
+def test_human_feedback_node_not_enough_context(
+    monkeypatch, mock_state_base, mock_config
+):
     # Plan does not have enough context, should goto research_team
     plan = {
         "has_enough_context": False,
@@ -502,7 +531,7 @@ def test_human_feedback_node_not_enough_context(monkeypatch, mock_state_base):
     state = dict(mock_state_base)
     state["current_plan"] = json.dumps(plan)
     state["auto_accepted_plan"] = True
-    result = human_feedback_node(state)
+    result = human_feedback_node(state, mock_config)
     assert isinstance(result, Command)
     assert result.goto == "research_team"
     assert result.update["plan_iterations"] == 1
@@ -514,6 +543,7 @@ def mock_state_coordinator():
     return {
         "messages": [{"role": "user", "content": "test"}],
         "locale": "en-US",
+        "enable_clarification": False,
     }
 
 
@@ -567,7 +597,7 @@ def test_coordinator_node_no_tool_calls(
     patch_handoff_to_planner,
     patch_logger,
 ):
-    # No tool calls, should goto __end__
+    # No tool calls, should fallback to planner (fix for issue #535)
     with (
         patch("src.graph.nodes.AGENT_LLM_MAP", {"coordinator": "basic"}),
         patch("src.graph.nodes.get_llm_by_type") as mock_get_llm,
@@ -578,7 +608,8 @@ def test_coordinator_node_no_tool_calls(
         mock_get_llm.return_value = mock_llm
 
         result = coordinator_node(mock_state_coordinator, MagicMock())
-        assert result.goto == "__end__"
+        # Should fallback to planner instead of __end__ to ensure workflow continues
+        assert result.goto == "planner"
         assert result.update["locale"] == "en-US"
         assert result.update["resources"] == ["resource1", "resource2"]
 
@@ -644,7 +675,7 @@ def test_coordinator_node_with_tool_calls_locale_override(
     tool_calls = [
         {
             "name": "handoff_to_planner",
-            "args": {"locale": "zh-CN", "research_topic": "test topic"},
+            "args": {"locale": "auto", "research_topic": "test topic"},
         }
     ]
     with (
@@ -658,7 +689,7 @@ def test_coordinator_node_with_tool_calls_locale_override(
 
         result = coordinator_node(mock_state_coordinator, MagicMock())
         assert result.goto == "planner"
-        assert result.update["locale"] == "zh-CN"
+        assert result.update["locale"] == "en-US"
         assert result.update["research_topic"] == "test topic"
         assert result.update["resources"] == ["resource1", "resource2"]
         assert result.update["resources"] == ["resource1", "resource2"]
@@ -938,7 +969,9 @@ async def test_execute_agent_step_no_unexecuted_step(
         )
         assert isinstance(result, Command)
         assert result.goto == "research_team"
-        mock_logger.warning.assert_called_with("No unexecuted step found")
+        # Updated assertion to match new debug logging format
+        mock_logger.warning.assert_called_once()
+        assert "No unexecuted step found" in mock_logger.warning.call_args[0][0]
 
 
 @pytest.mark.asyncio
@@ -1385,3 +1418,734 @@ async def test_researcher_node_without_resources(
     tools = args[3]
     assert patch_get_web_search_tool.return_value in tools
     assert result == "RESEARCHER_RESULT"
+
+
+# ============================================================================
+# Clarification Feature Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_clarification_workflow_integration():
+    """Test the complete clarification workflow integration."""
+    import inspect
+
+    from src.workflow import run_agent_workflow_async
+
+    # Verify that the function accepts clarification parameters
+    sig = inspect.signature(run_agent_workflow_async)
+    assert "max_clarification_rounds" in sig.parameters
+    assert "enable_clarification" in sig.parameters
+    assert "initial_state" in sig.parameters
+
+
+def test_clarification_parameters_combinations():
+    """Test various combinations of clarification parameters."""
+    from src.graph.nodes import needs_clarification
+
+    test_cases = [
+        # (enable_clarification, clarification_rounds, max_rounds, is_complete, expected)
+        (True, 0, 3, False, False),  # No rounds started
+        (True, 1, 3, False, True),  # In progress
+        (True, 2, 3, False, True),  # In progress
+        (True, 3, 3, False, True),  # At max - still waiting for last answer
+        (True, 4, 3, False, False),  # Exceeded max
+        (True, 1, 3, True, False),  # Completed
+        (False, 1, 3, False, False),  # Disabled
+    ]
+
+    for enable, rounds, max_rounds, complete, expected in test_cases:
+        state = {
+            "enable_clarification": enable,
+            "clarification_rounds": rounds,
+            "max_clarification_rounds": max_rounds,
+            "is_clarification_complete": complete,
+        }
+
+        result = needs_clarification(state)
+        assert result == expected, f"Failed for case: {state}"
+
+
+def test_handoff_tools():
+    """Test that handoff tools are properly defined."""
+    from src.graph.nodes import handoff_after_clarification, handoff_to_planner
+
+    # Test handoff_to_planner tool - use invoke() method
+    result = handoff_to_planner.invoke(
+        {"research_topic": "renewable energy", "locale": "en-US"}
+    )
+    assert result is None  # Tool should return None (no-op)
+
+    # Test handoff_after_clarification tool - use invoke() method
+    result = handoff_after_clarification.invoke(
+        {"locale": "en-US", "research_topic": "renewable energy research"}
+    )
+    assert result is None  # Tool should return None (no-op)
+
+
+@patch("src.graph.nodes.get_llm_by_type")
+def test_coordinator_tools_with_clarification_enabled(mock_get_llm):
+    """Test that coordinator binds correct tools when clarification is enabled."""
+    # Mock LLM response
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.content = "Let me clarify..."
+    mock_response.tool_calls = []
+    mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+    mock_get_llm.return_value = mock_llm
+
+    # State with clarification enabled (in progress)
+    state = {
+        "messages": [{"role": "user", "content": "Tell me about something"}],
+        "enable_clarification": True,
+        "clarification_rounds": 2,
+        "max_clarification_rounds": 3,
+        "is_clarification_complete": False,
+        "clarification_history": [
+            "Tell me about something",
+            "response 1",
+            "response 2",
+        ],
+        "locale": "en-US",
+        "research_topic": "Tell me about something",
+    }
+
+    # Mock config
+    config = {"configurable": {"resources": []}}
+
+    # Call coordinator_node
+    coordinator_node(state, config)
+
+    # Verify that LLM was called with bind_tools
+    assert mock_llm.bind_tools.called
+    bound_tools = mock_llm.bind_tools.call_args[0][0]
+
+    # Should bind 2 tools when clarification is enabled
+    assert len(bound_tools) == 2
+    tool_names = [tool.name for tool in bound_tools]
+    assert "handoff_to_planner" in tool_names
+    assert "handoff_after_clarification" in tool_names
+
+
+@patch("src.graph.nodes.get_llm_by_type")
+def test_coordinator_tools_with_clarification_disabled(mock_get_llm):
+    """Test that coordinator binds only one tool when clarification is disabled."""
+    # Mock LLM response with tool call
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.content = ""
+    mock_response.tool_calls = [
+        {
+            "name": "handoff_to_planner",
+            "args": {"research_topic": "test", "locale": "en-US"},
+        }
+    ]
+    mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+    mock_get_llm.return_value = mock_llm
+
+    # State with clarification disabled
+    state = {
+        "messages": [{"role": "user", "content": "Tell me about something"}],
+        "enable_clarification": False,
+        "locale": "en-US",
+        "research_topic": "",
+    }
+
+    # Mock config
+    config = {"configurable": {"resources": []}}
+
+    # Call coordinator_node
+    coordinator_node(state, config)
+
+    # Verify that LLM was called with bind_tools
+    assert mock_llm.bind_tools.called
+    bound_tools = mock_llm.bind_tools.call_args[0][0]
+
+    # Should bind only 1 tool when clarification is disabled
+    assert len(bound_tools) == 1
+    assert bound_tools[0].name == "handoff_to_planner"
+
+
+@patch("src.graph.nodes.get_llm_by_type")
+def test_coordinator_empty_llm_response_corner_case(mock_get_llm):
+    """
+    Corner case test: LLM returns empty response when clarification is enabled.
+
+    This tests error handling when LLM fails to return any content or tool calls
+    in the initial state (clarification_rounds=0). The system should gracefully
+    handle this by going to planner instead of crashing (fix for issue #535).
+
+    Note: This is NOT a typical clarification workflow test, but rather tests
+    fault tolerance when LLM misbehaves.
+    """
+    # Mock LLM response - empty response (failure scenario)
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.content = ""
+    mock_response.tool_calls = []
+    mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+    mock_get_llm.return_value = mock_llm
+
+    # State with clarification enabled but initial round
+    state = {
+        "messages": [{"role": "user", "content": "test"}],
+        "enable_clarification": True,
+        # clarification_rounds: 0 (default, not started)
+        "locale": "en-US",
+        "research_topic": "",
+    }
+
+    # Mock config
+    config = {"configurable": {"resources": []}}
+
+    # Call coordinator_node - should not crash
+    result = coordinator_node(state, config)
+
+    # Should gracefully handle empty response by going to planner to ensure workflow continues
+    assert result.goto == "planner"
+    assert result.update["locale"] == "en-US"
+
+
+# ============================================================================
+# Clarification flow tests
+# ============================================================================
+
+
+def test_clarification_handoff_combines_history():
+    """Coordinator should merge original topic with all clarification answers before handoff."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableConfig
+
+    test_state = {
+        "messages": [
+            {"role": "user", "content": "Research artificial intelligence"},
+            {"role": "assistant", "content": "Which area of AI should we focus on?"},
+            {"role": "user", "content": "Machine learning applications"},
+            {"role": "assistant", "content": "What dimension of that should we cover?"},
+            {"role": "user", "content": "Technical implementation details"},
+        ],
+        "enable_clarification": True,
+        "clarification_rounds": 2,
+        "clarification_history": [
+            "Research artificial intelligence",
+            "Machine learning applications",
+            "Technical implementation details",
+        ],
+        "max_clarification_rounds": 3,
+        "research_topic": "Research artificial intelligence",
+        "clarified_research_topic": "Research artificial intelligence - Machine learning applications, Technical implementation details",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "clarification-test"})
+
+    mock_response = AIMessage(
+        content="Understood, handing off now.",
+        tool_calls=[
+            {
+                "name": "handoff_after_clarification",
+                "args": {"locale": "en-US", "research_topic": "placeholder"},
+                "id": "tool-call-handoff",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(test_state, config)
+
+    assert hasattr(result, "update")
+    update = result.update
+    assert update["clarification_history"] == [
+        "Research artificial intelligence",
+        "Machine learning applications",
+        "Technical implementation details",
+    ]
+    expected_topic = (
+        "Research artificial intelligence - "
+        "Machine learning applications, Technical implementation details"
+    )
+    assert update["research_topic"] == "Research artificial intelligence"
+    assert update["clarified_research_topic"] == expected_topic
+
+
+def test_clarification_history_reconstructed_from_messages():
+    """Coordinator should rebuild clarification history from full message log when state is incomplete."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableConfig
+
+    incomplete_state = {
+        "messages": [
+            {"role": "user", "content": "Research on renewable energy"},
+            {
+                "role": "assistant",
+                "content": "Which type of renewable energy interests you?",
+            },
+            {"role": "user", "content": "Solar and wind energy"},
+            {"role": "assistant", "content": "Which aspect should we focus on?"},
+            {"role": "user", "content": "Technical implementation"},
+        ],
+        "enable_clarification": True,
+        "clarification_rounds": 2,
+        "clarification_history": ["Technical implementation"],
+        "max_clarification_rounds": 3,
+        "research_topic": "Research on renewable energy",
+        "clarified_research_topic": "Research on renewable energy",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "clarification-history-rebuild"})
+
+    mock_response = AIMessage(
+        content="Understood, handing over now.",
+        tool_calls=[
+            {
+                "name": "handoff_after_clarification",
+                "args": {"locale": "en-US", "research_topic": "placeholder"},
+                "id": "tool-call-handoff",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(incomplete_state, config)
+
+    update = result.update
+    assert update["clarification_history"] == [
+        "Research on renewable energy",
+        "Solar and wind energy",
+        "Technical implementation",
+    ]
+    assert update["research_topic"] == "Research on renewable energy"
+    assert (
+        update["clarified_research_topic"]
+        == "Research on renewable energy - Solar and wind energy, Technical implementation"
+    )
+
+
+def test_clarification_max_rounds_without_tool_call():
+    """Coordinator should stop asking questions after max rounds and hand off with compiled topic."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableConfig
+
+    test_state = {
+        "messages": [
+            {"role": "user", "content": "Research artificial intelligence"},
+            {"role": "assistant", "content": "Which area should we focus on?"},
+            {"role": "user", "content": "Natural language processing"},
+            {"role": "assistant", "content": "Which domain matters most?"},
+            {"role": "user", "content": "Healthcare"},
+            {"role": "assistant", "content": "Any specific scenario to study?"},
+            {"role": "user", "content": "Clinical documentation"},
+        ],
+        "enable_clarification": True,
+        "clarification_rounds": 3,
+        "clarification_history": [
+            "Research artificial intelligence",
+            "Natural language processing",
+            "Healthcare",
+            "Clinical documentation",
+        ],
+        "max_clarification_rounds": 3,
+        "research_topic": "Research artificial intelligence",
+        "clarified_research_topic": "Research artificial intelligence - Natural language processing, Healthcare, Clinical documentation",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "clarification-max"})
+
+    mock_response = AIMessage(
+        content="Got it, sending this to the planner.",
+        tool_calls=[],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(test_state, config)
+
+    assert hasattr(result, "update")
+    update = result.update
+    expected_topic = (
+        "Research artificial intelligence - "
+        "Natural language processing, Healthcare, Clinical documentation"
+    )
+    assert update["research_topic"] == "Research artificial intelligence"
+    assert update["clarified_research_topic"] == expected_topic
+    assert result.goto == "planner"
+
+
+def test_clarification_human_message_support():
+    """Coordinator should treat HumanMessage instances from the user as user authored."""
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.runnables import RunnableConfig
+
+    test_state = {
+        "messages": [
+            HumanMessage(content="Research artificial intelligence"),
+            HumanMessage(content="Which area should we focus on?", name="coordinator"),
+            HumanMessage(content="Machine learning"),
+            HumanMessage(
+                content="Which dimension should we explore?", name="coordinator"
+            ),
+            HumanMessage(content="Technical feasibility"),
+        ],
+        "enable_clarification": True,
+        "clarification_rounds": 2,
+        "clarification_history": [
+            "Research artificial intelligence",
+            "Machine learning",
+            "Technical feasibility",
+        ],
+        "max_clarification_rounds": 3,
+        "research_topic": "Research artificial intelligence",
+        "clarified_research_topic": "Research artificial intelligence - Machine learning, Technical feasibility",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "clarification-human"})
+
+    mock_response = AIMessage(
+        content="Moving to planner.",
+        tool_calls=[
+            {
+                "name": "handoff_after_clarification",
+                "args": {"locale": "en-US", "research_topic": "placeholder"},
+                "id": "human-message-handoff",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(test_state, config)
+
+    assert hasattr(result, "update")
+    update = result.update
+    expected_topic = (
+        "Research artificial intelligence - Machine learning, Technical feasibility"
+    )
+    assert update["clarification_history"] == [
+        "Research artificial intelligence",
+        "Machine learning",
+        "Technical feasibility",
+    ]
+    assert update["research_topic"] == "Research artificial intelligence"
+    assert update["clarified_research_topic"] == expected_topic
+
+
+def test_clarification_no_history_defaults_to_topic():
+    """If clarification never started, coordinator should forward the original topic."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableConfig
+
+    test_state = {
+        "messages": [{"role": "user", "content": "What is quantum computing?"}],
+        "enable_clarification": True,
+        "clarification_rounds": 0,
+        "clarification_history": ["What is quantum computing?"],
+        "max_clarification_rounds": 3,
+        "research_topic": "What is quantum computing?",
+        "clarified_research_topic": "What is quantum computing?",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "clarification-none"})
+
+    mock_response = AIMessage(
+        content="Understood.",
+        tool_calls=[
+            {
+                "name": "handoff_to_planner",
+                "args": {"locale": "en-US", "research_topic": "placeholder"},
+                "id": "clarification-none",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(test_state, config)
+
+    assert hasattr(result, "update")
+    assert result.update["research_topic"] == "What is quantum computing?"
+    assert result.update["clarified_research_topic"] == "What is quantum computing?"
+
+
+# ============================================================================
+# Issue #650: Pydantic validation errors (missing step_type field)
+# ============================================================================
+
+
+def test_planner_node_issue_650_missing_step_type_basic():
+    """Test planner_node with missing step_type fields (Issue #650)."""
+    from src.graph.nodes import validate_and_fix_plan
+
+    # Simulate LLM response with missing step_type (Issue #650 scenario)
+    llm_response = {
+        "locale": "en-US",
+        "has_enough_context": False,
+        "thought": "Need to gather data",
+        "title": "Test Plan",
+        "steps": [
+            {
+                "need_search": True,
+                "title": "Research Step",
+                "description": "Gather info",
+                # step_type MISSING - this is the issue
+            },
+            {
+                "need_search": False,
+                "title": "Processing Step",
+                "description": "Analyze",
+                # step_type MISSING
+            },
+        ],
+    }
+
+    # Apply the fix
+    fixed_plan = validate_and_fix_plan(llm_response)
+
+    # Verify all steps have step_type after fix
+    assert isinstance(fixed_plan, dict)
+    assert fixed_plan["steps"][0]["step_type"] == "research"
+    assert fixed_plan["steps"][1]["step_type"] == "processing"
+    assert all("step_type" in step for step in fixed_plan["steps"])
+
+
+def test_planner_node_issue_650_water_footprint_scenario():
+    """Test the exact water footprint query scenario from Issue #650."""
+    from src.graph.nodes import validate_and_fix_plan
+
+    # Approximate the exact plan structure that caused Issue #650
+    # "How many liters of water are required to produce 1 kg of beef?"
+    llm_response = {
+        "locale": "en-US",
+        "has_enough_context": False,
+        "thought": "You asked about water footprint of beef - need comprehensive data gathering",
+        "title": "Research Plan — Water Footprint of 1 kg of Beef",
+        "steps": [
+            {
+                "need_search": True,
+                "title": "Authoritative global estimates",
+                "description": "Collect peer-reviewed estimates",
+                # MISSING step_type
+            },
+            {
+                "need_search": True,
+                "title": "System-specific data",
+                "description": "Gather system-level variation data",
+                # MISSING step_type
+            },
+            {
+                "need_search": False,
+                "title": "Synthesize estimates",
+                "description": "Calculate scenario-based estimates",
+                # MISSING step_type
+            },
+        ],
+    }
+
+    # Apply the fix
+    fixed_plan = validate_and_fix_plan(llm_response)
+
+    # Verify structure - all steps should have step_type filled in
+    assert len(fixed_plan["steps"]) == 3
+    assert fixed_plan["steps"][0]["step_type"] == "research"
+    assert fixed_plan["steps"][1]["step_type"] == "research"
+    assert fixed_plan["steps"][2]["step_type"] == "processing"
+    assert all("step_type" in step for step in fixed_plan["steps"])
+
+
+def test_planner_node_issue_650_validation_error_fixed():
+    """Test that the validation error from Issue #650 is now prevented."""
+    from src.graph.nodes import validate_and_fix_plan
+
+    # This is the exact type of response that caused the error in Issue #650
+    malformed_response = {
+        "locale": "en-US",
+        "has_enough_context": False,
+        "title": "Test",
+        "thought": "Test",
+        "steps": [
+            {
+                "need_search": True,
+                "title": "Step 1",
+                "description": "Test description",
+                # Missing step_type - caused "Field required" error
+            },
+        ],
+    }
+
+    # Before fix would raise:
+    # ValidationError: 1 validation error for Plan
+    # steps.0.step_type Field required [type=missing, ...]
+
+    # After fix should succeed without raising exception
+    fixed = validate_and_fix_plan(malformed_response)
+
+    # Verify the fix was applied
+    assert fixed["steps"][0]["step_type"] in ["research", "processing"]
+    assert "step_type" in fixed["steps"][0]
+
+
+def test_human_feedback_node_issue_650_plan_parsing():
+    """Test human_feedback_node with Issue #650 plan that has missing step_type."""
+    from src.graph.nodes import human_feedback_node
+
+    # Plan with missing step_type fields
+    state = {
+        "current_plan": json.dumps(
+            {
+                "locale": "en-US",
+                "has_enough_context": False,
+                "title": "Test Plan",
+                "thought": "Test",
+                "steps": [
+                    {
+                        "need_search": True,
+                        "title": "Step 1",
+                        "description": "Gather",
+                        # MISSING step_type
+                    },
+                ],
+            }
+        ),
+        "plan_iterations": 0,
+        "auto_accepted_plan": True,
+    }
+
+    config = MagicMock()
+    with patch(
+        "src.graph.nodes.Configuration.from_runnable_config",
+        return_value=MagicMock(enforce_web_search=False),
+    ):
+        with patch("src.graph.nodes.Plan.model_validate", side_effect=lambda x: x):
+            with patch("src.graph.nodes.repair_json_output", side_effect=lambda x: x):
+                result = human_feedback_node(state, config)
+
+                # Should succeed without validation error
+                assert isinstance(result, Command)
+                assert result.goto == "research_team"
+
+
+def test_plan_validation_with_all_issue_650_error_scenarios():
+    """Test all variations of Issue #650 error scenarios."""
+    from src.graph.nodes import validate_and_fix_plan
+
+    test_scenarios = [
+        # Missing step_type with need_search=true
+        {
+            "steps": [
+                {"need_search": True, "title": "R", "description": "D"},
+            ]
+        },
+        # Missing step_type with need_search=false
+        {
+            "steps": [
+                {"need_search": False, "title": "P", "description": "D"},
+            ]
+        },
+        # Multiple missing step_types
+        {
+            "steps": [
+                {"need_search": True, "title": "R1", "description": "D"},
+                {"need_search": True, "title": "R2", "description": "D"},
+                {"need_search": False, "title": "P", "description": "D"},
+            ]
+        },
+        # Mix of missing and present step_type
+        {
+            "steps": [
+                {"need_search": True, "title": "R", "description": "D", "step_type": "research"},
+                {"need_search": False, "title": "P", "description": "D"},
+            ]
+        },
+    ]
+
+    for scenario in test_scenarios:
+        plan = {
+            "locale": "en-US",
+            "has_enough_context": False,
+            "title": "Test",
+            "thought": "Test",
+            **scenario,
+        }
+
+        # Should not raise exception
+        fixed = validate_and_fix_plan(plan)
+
+        # All steps should have step_type after fix
+        for step in fixed["steps"]:
+            assert "step_type" in step
+            assert step["step_type"] in ["research", "processing"]
+
+def test_clarification_skips_specific_topics():
+    """Coordinator should skip clarification for already specific topics."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableConfig
+
+    test_state = {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Research Plan for Improving Efficiency of AI e-commerce Video Synthesis Technology Based on Transformer Model",
+            }
+        ],
+        "enable_clarification": True,
+        "clarification_rounds": 0,
+        "clarification_history": [],
+        "max_clarification_rounds": 3,
+        "research_topic": "Research Plan for Improving Efficiency of AI e-commerce Video Synthesis Technology Based on Transformer Model",
+        "locale": "en-US",
+    }
+
+    config = RunnableConfig(configurable={"thread_id": "specific-topic-test"})
+
+    mock_response = AIMessage(
+        content="I understand you want to research AI e-commerce video synthesis technology. Let me hand this off to the planner.",
+        tool_calls=[
+            {
+                "name": "handoff_to_planner",
+                "args": {
+                    "locale": "en-US",
+                    "research_topic": "Research Plan for Improving Efficiency of AI e-commerce Video Synthesis Technology Based on Transformer Model",
+                },
+                "id": "tool-call-handoff",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    with patch("src.graph.nodes.get_llm_by_type") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
+
+        result = coordinator_node(test_state, config)
+
+    assert hasattr(result, "update")
+    assert result.goto == "planner"
+    assert (
+        result.update["research_topic"]
+        == "Research Plan for Improving Efficiency of AI e-commerce Video Synthesis Technology Based on Transformer Model"
+    )

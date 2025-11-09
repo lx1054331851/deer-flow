@@ -36,6 +36,9 @@
     "general": {
       "title": "通用",
       "autoAcceptPlan": "允许自动接受计划",
+      "enableClarification": "允许澄清",
+      "maxClarificationRounds": "最大澄清回合数",
+      "maxClarificationRoundsDescription": "启用澄清时允许的最大澄清回合数，默认是3。",
       "maxPlanIterations": "最大计划迭代次数",
       "maxPlanIterationsDescription": "设置为 1 进行单步规划。设置为 2 或更多以启用重新规划。",
       "maxStepsOfPlan": "研究计划的最大步骤数",
@@ -49,8 +52,15 @@
       "learnMore": "了解更多关于 MCP 的信息。",
       "enableDisable": "启用/禁用服务器",
       "deleteServer": "删除服务器",
+      "editServer": "编辑服务器",
+      "refreshServer": "刷新服务器",
+      "editServerDescription": "编辑 MCP 服务器配置",
+      "editServerNote": "以 JSON 格式更新服务器配置",
       "disabled": "已禁用",
-      "new": "新增"
+      "new": "新增",
+      "invalidJson": "无效的 JSON 格式",
+      "validationFailed": "验证失败",
+      "missingServerName": "缺少服务器名称"
     },
     "about": {
       "title": "关于"
