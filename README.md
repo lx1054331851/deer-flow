@@ -88,18 +88,23 @@ Docker 开发详细说明请参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
    make check  # 校验 Node.js 22+、pnpm、uv、nginx
    ```
 
-2. **（可选）预拉取沙箱镜像**：
+2. **安装项目依赖**：
+   ```bash
+   make install  # 安装 frontend + backend 依赖
+   ```
+
+3. **（可选）预拉取沙箱镜像**：
    ```bash
    # 如果使用 Docker/容器沙箱，建议执行
    make setup-sandbox
    ```
 
-3. **启动服务**：
+4. **启动服务**：
    ```bash
    make dev
    ```
 
-4. **访问**：http://localhost:2026
+5. **访问**：http://localhost:2026
 
 ## 从 Deep Research 到 Super Agent Harness
 
