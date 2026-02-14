@@ -1,263 +1,263 @@
-# Contributing to DeerFlow
+# 参与贡献 DeerFlow
 
-Thank you for your interest in contributing to DeerFlow! This guide will help you set up your development environment and understand our development workflow.
+感谢你对 DeerFlow 的贡献兴趣！本指南将帮助你搭建开发环境，并了解我们的开发工作流。
 
-## Development Environment Setup
+## 开发环境搭建
 
-We offer two development environments. **Docker is recommended** for the most consistent and hassle-free experience.
+我们提供两种开发环境。为获得最一致、最省心的体验，**推荐使用 Docker**。
 
-### Option 1: Docker Development (Recommended)
+### 选项 1：Docker 开发（推荐）
 
-Docker provides a consistent, isolated environment with all dependencies pre-configured. No need to install Node.js, Python, or nginx on your local machine.
+Docker 提供一致且隔离的环境，并预先配置好依赖。你无需在本机安装 Node.js、Python 或 nginx。
 
-#### Prerequisites
+#### 前置要求
 
-- Docker Desktop or Docker Engine
-- pnpm (for caching optimization)
+- Docker Desktop 或 Docker Engine
+- pnpm（用于缓存优化）
 
-#### Setup Steps
+#### 搭建步骤
 
-1. **Configure the application**:
+1. **配置应用**：
    ```bash
-   # Copy example configuration
+   # 复制示例配置
    cp config.example.yaml config.yaml
 
-   # Set your API keys
+   # 设置你的 API Key
    export OPENAI_API_KEY="your-key-here"
-   # or edit config.yaml directly
+   # 或直接编辑 config.yaml
 
-   # Optional: Enable MCP servers and skills
+   # 可选：启用 MCP servers 和 skills
    cp extensions_config.example.json extensions_config.json
-   # Edit extensions_config.json to enable desired MCP servers and skills
+   # 编辑 extensions_config.json 以启用所需 MCP servers 和 skills
    ```
 
-2. **Initialize Docker environment** (first time only):
+2. **初始化 Docker 环境**（仅首次需要）：
    ```bash
    make docker-init
    ```
-   This will:
-   - Build Docker images
-   - Install frontend dependencies (pnpm)
-   - Install backend dependencies (uv)
-   - Share pnpm cache with host for faster builds
+   该命令会：
+   - 构建 Docker 镜像
+   - 安装前端依赖（pnpm）
+   - 安装后端依赖（uv）
+   - 与宿主机共享 pnpm 缓存以加速构建
 
-3. **Start development services**:
+3. **启动开发服务**：
    ```bash
    make docker-start
    ```
-   All services will start with hot-reload enabled:
-   - Frontend changes are automatically reloaded
-   - Backend changes trigger automatic restart
-   - LangGraph server supports hot-reload
+   所有服务都会以热重载模式启动：
+   - 前端变更会自动刷新
+   - 后端变更会自动重启
+   - LangGraph 服务支持热重载
 
-4. **Access the application**:
-   - Web Interface: http://localhost:2026
-   - API Gateway: http://localhost:2026/api/*
-   - LangGraph: http://localhost:2026/api/langgraph/*
+4. **访问应用**：
+   - Web 界面：http://localhost:2026
+   - API Gateway：http://localhost:2026/api/*
+   - LangGraph：http://localhost:2026/api/langgraph/*
 
-#### Docker Commands
+#### Docker 常用命令
 
 ```bash
-# View all logs
+# 查看全部日志
 make docker-logs
 
-# Restart services
+# 重启服务
 make docker-restart
 
-# Stop services
+# 停止服务
 make docker-stop
 
-# Get help
+# 查看帮助
 make docker-help
 ```
 
-#### Docker Architecture
+#### Docker 架构
 
 ```
-Host Machine
+宿主机
   ↓
 Docker Compose (deer-flow-dev)
-  ├→ nginx (port 2026) ← Reverse proxy
-  ├→ web (port 3000) ← Frontend with hot-reload
-  ├→ api (port 8001) ← Gateway API with hot-reload
-  └→ langgraph (port 2024) ← LangGraph server with hot-reload
+  ├→ nginx (port 2026) ← 反向代理
+  ├→ web (port 3000) ← 支持热重载的前端
+  ├→ api (port 8001) ← 支持热重载的 Gateway API
+  └→ langgraph (port 2024) ← 支持热重载的 LangGraph 服务
 ```
 
-**Benefits of Docker Development**:
-- ✅ Consistent environment across different machines
-- ✅ No need to install Node.js, Python, or nginx locally
-- ✅ Isolated dependencies and services
-- ✅ Easy cleanup and reset
-- ✅ Hot-reload for all services
-- ✅ Production-like environment
+**Docker 开发的优势**：
+- ✅ 跨机器环境一致
+- ✅ 无需本地安装 Node.js、Python 或 nginx
+- ✅ 依赖与服务相互隔离
+- ✅ 易于清理和重置
+- ✅ 所有服务支持热重载
+- ✅ 更接近生产环境
 
-### Option 2: Local Development
+### 选项 2：本地开发
 
-If you prefer to run services directly on your machine:
+如果你希望直接在本机运行服务：
 
-#### Prerequisites
+#### 前置要求
 
-Check that you have all required tools installed:
+先检查必需工具是否齐全：
 
 ```bash
 make check
 ```
 
-Required tools:
+所需工具：
 - Node.js 22+
 - pnpm
-- uv (Python package manager)
+- uv（Python 包管理器）
 - nginx
 
-#### Setup Steps
+#### 搭建步骤
 
-1. **Configure the application** (same as Docker setup above)
+1. **配置应用**（与上方 Docker 配置相同）
 
-2. **Install dependencies**:
+2. **安装依赖**：
    ```bash
    make install
    ```
 
-3. **Run development server** (starts all services with nginx):
+3. **运行开发服务**（通过 nginx 启动全部服务）：
    ```bash
    make dev
    ```
 
-4. **Access the application**:
-   - Web Interface: http://localhost:2026
-   - All API requests are automatically proxied through nginx
+4. **访问应用**：
+   - Web 界面：http://localhost:2026
+   - 所有 API 请求会自动经由 nginx 反向代理
 
-#### Manual Service Control
+#### 手动控制服务
 
-If you need to start services individually:
+如果你需要分别启动服务：
 
-1. **Start backend services**:
+1. **启动后端服务**：
    ```bash
-   # Terminal 1: Start LangGraph Server (port 2024)
+   # 终端 1：启动 LangGraph 服务（端口 2024）
    cd backend
    make dev
 
-   # Terminal 2: Start Gateway API (port 8001)
+   # 终端 2：启动 Gateway API（端口 8001）
    cd backend
    make gateway
 
-   # Terminal 3: Start Frontend (port 3000)
+   # 终端 3：启动前端（端口 3000）
    cd frontend
    pnpm dev
    ```
 
-2. **Start nginx**:
+2. **启动 nginx**：
    ```bash
    make nginx
-   # or directly: nginx -c $(pwd)/docker/nginx/nginx.local.conf -g 'daemon off;'
+   # 或直接运行：nginx -c $(pwd)/docker/nginx/nginx.local.conf -g 'daemon off;'
    ```
 
-3. **Access the application**:
-   - Web Interface: http://localhost:2026
+3. **访问应用**：
+   - Web 界面：http://localhost:2026
 
-#### Nginx Configuration
+#### Nginx 配置
 
-The nginx configuration provides:
-- Unified entry point on port 2026
-- Routes `/api/langgraph/*` to LangGraph Server (2024)
-- Routes other `/api/*` endpoints to Gateway API (8001)
-- Routes non-API requests to Frontend (3000)
-- Centralized CORS handling
-- SSE/streaming support for real-time agent responses
-- Optimized timeouts for long-running operations
+nginx 配置提供：
+- 2026 端口统一入口
+- 将 `/api/langgraph/*` 路由到 LangGraph 服务（2024）
+- 将其他 `/api/*` 端点路由到 Gateway API（8001）
+- 将非 API 请求路由到前端（3000）
+- 集中式 CORS 处理
+- 支持 SSE/流式实时 Agent 响应
+- 针对长耗时操作优化超时配置
 
-## Project Structure
+## 项目结构
 
 ```
 deer-flow/
-├── config.example.yaml      # Configuration template
-├── extensions_config.example.json  # MCP and Skills configuration template
-├── Makefile                 # Build and development commands
+├── config.example.yaml      # 配置模板
+├── extensions_config.example.json  # MCP 与 Skills 配置模板
+├── Makefile                 # 构建与开发命令
 ├── scripts/
-│   └── docker.sh           # Docker management script
+│   └── docker.sh           # Docker 管理脚本
 ├── docker/
-│   ├── docker-compose-dev.yaml  # Docker Compose configuration
+│   ├── docker-compose-dev.yaml  # Docker Compose 配置
 │   └── nginx/
-│       ├── nginx.conf      # Nginx config for Docker
-│       └── nginx.local.conf # Nginx config for local dev
-├── backend/                 # Backend application
+│       ├── nginx.conf      # Docker 环境下的 Nginx 配置
+│       └── nginx.local.conf # 本地开发环境下的 Nginx 配置
+├── backend/                 # 后端应用
 │   ├── src/
-│   │   ├── gateway/        # Gateway API (port 8001)
-│   │   ├── agents/         # LangGraph agents (port 2024)
-│   │   ├── mcp/            # Model Context Protocol integration
-│   │   ├── skills/         # Skills system
-│   │   └── sandbox/        # Sandbox execution
-│   ├── docs/               # Backend documentation
-│   └── Makefile            # Backend commands
-├── frontend/               # Frontend application
-│   └── Makefile            # Frontend commands
-└── skills/                 # Agent skills
-    ├── public/             # Public skills
-    └── custom/             # Custom skills
+│   │   ├── gateway/        # Gateway API（端口 8001）
+│   │   ├── agents/         # LangGraph agents（端口 2024）
+│   │   ├── mcp/            # Model Context Protocol 集成
+│   │   ├── skills/         # Skills 系统
+│   │   └── sandbox/        # 沙箱执行
+│   ├── docs/               # 后端文档
+│   └── Makefile            # 后端命令
+├── frontend/               # 前端应用
+│   └── Makefile            # 前端命令
+└── skills/                 # Agent 技能
+    ├── public/             # 公共技能
+    └── custom/             # 自定义技能
 ```
 
-## Architecture
+## 架构
 
 ```
-Browser
+浏览器
   ↓
-Nginx (port 2026) ← Unified entry point
-  ├→ Frontend (port 3000) ← / (non-API requests)
+Nginx (port 2026) ← 统一入口
+  ├→ Frontend (port 3000) ← /（非 API 请求）
   ├→ Gateway API (port 8001) ← /api/models, /api/mcp, /api/skills, /api/threads/*/artifacts
-  └→ LangGraph Server (port 2024) ← /api/langgraph/* (agent interactions)
+  └→ LangGraph Server (port 2024) ← /api/langgraph/*（Agent 交互）
 ```
 
-## Development Workflow
+## 开发工作流
 
-1. **Create a feature branch**:
+1. **创建功能分支**：
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-2. **Make your changes** with hot-reload enabled
+2. 在热重载环境下**进行代码修改**
 
-3. **Test your changes** thoroughly
+3. **充分测试**你的改动
 
-4. **Commit your changes**:
+4. **提交改动**：
    ```bash
    git add .
    git commit -m "feat: description of your changes"
    ```
 
-5. **Push and create a Pull Request**:
+5. **推送并创建 Pull Request**：
    ```bash
    git push origin feature/your-feature-name
    ```
 
-## Testing
+## 测试
 
 ```bash
-# Backend tests
+# 后端测试
 cd backend
 uv run pytest
 
-# Frontend tests
+# 前端测试
 cd frontend
 pnpm test
 ```
 
-## Code Style
+## 代码风格
 
-- **Backend (Python)**: We use `ruff` for linting and formatting
-- **Frontend (TypeScript)**: We use ESLint and Prettier
+- **后端（Python）**：使用 `ruff` 进行 lint 与格式化
+- **前端（TypeScript）**：使用 ESLint 与 Prettier
 
-## Documentation
+## 文档
 
-- [Configuration Guide](backend/docs/CONFIGURATION.md) - Setup and configuration
-- [Architecture Overview](backend/CLAUDE.md) - Technical architecture
-- [MCP Setup Guide](MCP_SETUP.md) - Model Context Protocol configuration
+- [Configuration Guide](backend/docs/CONFIGURATION.md) - 安装与配置
+- [Architecture Overview](backend/CLAUDE.md) - 技术架构
+- [MCP Setup Guide](MCP_SETUP.md) - Model Context Protocol 配置
 
-## Need Help?
+## 需要帮助？
 
-- Check existing [Issues](https://github.com/bytedance/deer-flow/issues)
-- Read the [Documentation](backend/docs/)
-- Ask questions in [Discussions](https://github.com/bytedance/deer-flow/discussions)
+- 查看已有 [Issues](https://github.com/bytedance/deer-flow/issues)
+- 阅读 [Documentation](backend/docs/)
+- 在 [Discussions](https://github.com/bytedance/deer-flow/discussions) 中提问
 
-## License
+## 许可证
 
-By contributing to DeerFlow, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
+向 DeerFlow 贡献代码即表示你同意你的贡献将按照 [MIT License](./LICENSE) 进行许可。
