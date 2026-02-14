@@ -1,39 +1,39 @@
-# API Reference
+# API 参考文档
 
-This document provides a complete reference for the DeerFlow backend APIs.
+本文档提供 DeerFlow 后端 API 的完整参考。
 
-## Overview
+## 概览
 
-DeerFlow backend exposes two sets of APIs:
+DeerFlow 后端暴露两组 API：
 
-1. **LangGraph API** - Agent interactions, threads, and streaming (`/api/langgraph/*`)
-2. **Gateway API** - Models, MCP, skills, uploads, and artifacts (`/api/*`)
+1. **LangGraph API** - Agent 交互、线程与流式响应（`/api/langgraph/*`）
+2. **Gateway API** - 模型、MCP、技能、上传与产物（`/api/*`）
 
-All APIs are accessed through the Nginx reverse proxy at port 2026.
+所有 API 都通过 Nginx 反向代理的 2026 端口访问。
 
 ## LangGraph API
 
-Base URL: `/api/langgraph`
+基础 URL：`/api/langgraph`
 
-The LangGraph API is provided by the LangGraph server and follows the LangGraph SDK conventions.
+LangGraph API 由 LangGraph 服务器提供，并遵循 LangGraph SDK 约定。
 
-### Threads
+### 线程（Threads）
 
-#### Create Thread
+#### 创建线程（Create Thread）
 
 ```http
 POST /api/langgraph/threads
 Content-Type: application/json
 ```
 
-**Request Body:**
+**请求体：**
 ```json
 {
   "metadata": {}
 }
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "thread_id": "abc123",
@@ -42,13 +42,13 @@ Content-Type: application/json
 }
 ```
 
-#### Get Thread State
+#### 获取线程状态（Get Thread State）
 
 ```http
 GET /api/langgraph/threads/{thread_id}/state
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "values": {
@@ -63,18 +63,18 @@ GET /api/langgraph/threads/{thread_id}/state
 }
 ```
 
-### Runs
+### 运行（Runs）
 
-#### Create Run
+#### 创建运行（Create Run）
 
-Execute the agent with input.
+使用输入执行 Agent。
 
 ```http
 POST /api/langgraph/threads/{thread_id}/runs
 Content-Type: application/json
 ```
 
-**Request Body:**
+**请求体：**
 ```json
 {
   "input": {
@@ -96,12 +96,12 @@ Content-Type: application/json
 }
 ```
 
-**Configurable Options:**
-- `model_name` (string): Override the default model
-- `thinking_enabled` (boolean): Enable extended thinking for supported models
-- `is_plan_mode` (boolean): Enable TodoList middleware for task tracking
+**可配置选项（Configurable Options）：**
+- `model_name`（string）：覆盖默认模型
+- `thinking_enabled`（boolean）：为支持的模型启用扩展思考
+- `is_plan_mode`（boolean）：启用 TodoList 中间件进行任务追踪
 
-**Response:** Server-Sent Events (SSE) stream
+**响应：** Server-Sent Events（SSE）流
 
 ```
 event: values
@@ -114,13 +114,13 @@ event: end
 data: {}
 ```
 
-#### Get Run History
+#### 获取运行历史（Get Run History）
 
 ```http
 GET /api/langgraph/threads/{thread_id}/runs
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "runs": [
@@ -133,34 +133,34 @@ GET /api/langgraph/threads/{thread_id}/runs
 }
 ```
 
-#### Stream Run
+#### 流式运行（Stream Run）
 
-Stream responses in real-time.
+实时流式返回响应。
 
 ```http
 POST /api/langgraph/threads/{thread_id}/runs/stream
 Content-Type: application/json
 ```
 
-Same request body as Create Run. Returns SSE stream.
+请求体与 Create Run 相同。返回 SSE 流。
 
 ---
 
 ## Gateway API
 
-Base URL: `/api`
+基础 URL：`/api`
 
-### Models
+### 模型（Models）
 
-#### List Models
+#### 列出模型（List Models）
 
-Get all available LLM models from configuration.
+从配置中获取所有可用 LLM 模型。
 
 ```http
 GET /api/models
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "models": [
@@ -186,13 +186,13 @@ GET /api/models
 }
 ```
 
-#### Get Model Details
+#### 获取模型详情（Get Model Details）
 
 ```http
 GET /api/models/{model_name}
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "name": "gpt-4",
@@ -204,17 +204,17 @@ GET /api/models/{model_name}
 }
 ```
 
-### MCP Configuration
+### MCP 配置（MCP Configuration）
 
-#### Get MCP Config
+#### 获取 MCP 配置（Get MCP Config）
 
-Get current MCP server configurations.
+获取当前 MCP 服务器配置。
 
 ```http
 GET /api/mcp/config
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "mcpServers": {
@@ -239,16 +239,16 @@ GET /api/mcp/config
 }
 ```
 
-#### Update MCP Config
+#### 更新 MCP 配置（Update MCP Config）
 
-Update MCP server configurations.
+更新 MCP 服务器配置。
 
 ```http
 PUT /api/mcp/config
 Content-Type: application/json
 ```
 
-**Request Body:**
+**请求体：**
 ```json
 {
   "mcpServers": {
@@ -266,7 +266,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -274,17 +274,17 @@ Content-Type: application/json
 }
 ```
 
-### Skills
+### 技能（Skills）
 
-#### List Skills
+#### 列出技能（List Skills）
 
-Get all available skills.
+获取所有可用技能。
 
 ```http
 GET /api/skills
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "skills": [
@@ -308,13 +308,13 @@ GET /api/skills
 }
 ```
 
-#### Get Skill Details
+#### 获取技能详情（Get Skill Details）
 
 ```http
 GET /api/skills/{skill_name}
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "name": "pdf-processing",
@@ -328,13 +328,13 @@ GET /api/skills/{skill_name}
 }
 ```
 
-#### Enable Skill
+#### 启用技能（Enable Skill）
 
 ```http
 POST /api/skills/{skill_name}/enable
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -342,13 +342,13 @@ POST /api/skills/{skill_name}/enable
 }
 ```
 
-#### Disable Skill
+#### 禁用技能（Disable Skill）
 
 ```http
 POST /api/skills/{skill_name}/disable
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -356,19 +356,19 @@ POST /api/skills/{skill_name}/disable
 }
 ```
 
-#### Install Skill
+#### 安装技能（Install Skill）
 
-Install a skill from a `.skill` file.
+从 `.skill` 文件安装技能。
 
 ```http
 POST /api/skills/install
 Content-Type: multipart/form-data
 ```
 
-**Request Body:**
-- `file`: The `.skill` file to install
+**请求体：**
+- `file`：要安装的 `.skill` 文件
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -381,21 +381,21 @@ Content-Type: multipart/form-data
 }
 ```
 
-### File Uploads
+### 文件上传（File Uploads）
 
-#### Upload Files
+#### 上传文件（Upload Files）
 
-Upload one or more files to a thread.
+向线程上传一个或多个文件。
 
 ```http
 POST /api/threads/{thread_id}/uploads
 Content-Type: multipart/form-data
 ```
 
-**Request Body:**
-- `files`: One or more files to upload
+**请求体：**
+- `files`：一个或多个待上传文件
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -416,19 +416,19 @@ Content-Type: multipart/form-data
 }
 ```
 
-**Supported Document Formats** (auto-converted to Markdown):
-- PDF (`.pdf`)
-- PowerPoint (`.ppt`, `.pptx`)
-- Excel (`.xls`, `.xlsx`)
-- Word (`.doc`, `.docx`)
+**支持的文档格式**（自动转换为 Markdown）：
+- PDF（`.pdf`）
+- PowerPoint（`.ppt`, `.pptx`）
+- Excel（`.xls`, `.xlsx`）
+- Word（`.doc`, `.docx`）
 
-#### List Uploaded Files
+#### 列出已上传文件（List Uploaded Files）
 
 ```http
 GET /api/threads/{thread_id}/uploads/list
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "files": [
@@ -446,13 +446,13 @@ GET /api/threads/{thread_id}/uploads/list
 }
 ```
 
-#### Delete File
+#### 删除文件（Delete File）
 
 ```http
 DELETE /api/threads/{thread_id}/uploads/{filename}
 ```
 
-**Response:**
+**响应：**
 ```json
 {
   "success": true,
@@ -460,30 +460,30 @@ DELETE /api/threads/{thread_id}/uploads/{filename}
 }
 ```
 
-### Artifacts
+### 产物（Artifacts）
 
-#### Get Artifact
+#### 获取产物（Get Artifact）
 
-Download or view an artifact generated by the agent.
+下载或查看 Agent 生成的产物文件。
 
 ```http
 GET /api/threads/{thread_id}/artifacts/{path}
 ```
 
-**Path Examples:**
+**路径示例：**
 - `/api/threads/abc123/artifacts/mnt/user-data/outputs/result.txt`
 - `/api/threads/abc123/artifacts/mnt/user-data/uploads/document.pdf`
 
-**Query Parameters:**
-- `download` (boolean): If `true`, force download with Content-Disposition header
+**查询参数：**
+- `download`（boolean）：若为 `true`，通过 Content-Disposition 强制下载
 
-**Response:** File content with appropriate Content-Type
+**响应：** 返回对应 Content-Type 的文件内容
 
 ---
 
-## Error Responses
+## 错误响应（Error Responses）
 
-All APIs return errors in a consistent format:
+所有 API 都使用统一错误格式：
 
 ```json
 {
@@ -491,28 +491,28 @@ All APIs return errors in a consistent format:
 }
 ```
 
-**HTTP Status Codes:**
-- `400` - Bad Request: Invalid input
-- `404` - Not Found: Resource not found
-- `422` - Validation Error: Request validation failed
-- `500` - Internal Server Error: Server-side error
+**HTTP 状态码：**
+- `400` - Bad Request：无效输入
+- `404` - Not Found：资源不存在
+- `422` - Validation Error：请求校验失败
+- `500` - Internal Server Error：服务端错误
 
 ---
 
-## Authentication
+## 认证（Authentication）
 
-Currently, DeerFlow does not implement authentication. All APIs are accessible without credentials.
+目前 DeerFlow 未实现认证机制。所有 API 均可在无凭据情况下访问。
 
-For production deployments, it is recommended to:
-1. Use Nginx for basic auth or OAuth integration
-2. Deploy behind a VPN or private network
-3. Implement custom authentication middleware
+在生产环境中，建议：
+1. 使用 Nginx 做基础认证或 OAuth 集成
+2. 部署在 VPN 或私有网络之后
+3. 实现自定义认证中间件
 
 ---
 
-## Rate Limiting
+## 限流（Rate Limiting）
 
-No rate limiting is implemented by default. For production deployments, configure rate limiting in Nginx:
+默认未启用限流。生产环境可在 Nginx 中配置：
 
 ```nginx
 limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
@@ -525,9 +525,9 @@ location /api/ {
 
 ---
 
-## WebSocket Support
+## WebSocket 支持（WebSocket Support）
 
-The LangGraph server supports WebSocket connections for real-time streaming. Connect to:
+LangGraph 服务器支持用于实时流式响应的 WebSocket 连接。连接地址：
 
 ```
 ws://localhost:2026/api/langgraph/threads/{thread_id}/runs/stream
@@ -535,9 +535,9 @@ ws://localhost:2026/api/langgraph/threads/{thread_id}/runs/stream
 
 ---
 
-## SDK Usage
+## SDK 用法（SDK Usage）
 
-### Python (LangGraph SDK)
+### Python（LangGraph SDK）
 
 ```python
 from langgraph_sdk import get_client
@@ -575,7 +575,7 @@ eventSource.onmessage = (event) => {
 };
 ```
 
-### cURL Examples
+### cURL 示例
 
 ```bash
 # List models

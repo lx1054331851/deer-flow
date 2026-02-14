@@ -1,25 +1,25 @@
-# Task Tool Improvements
+# Task 工具改进
 
-## Overview
+## 概览
 
-The task tool has been improved to eliminate wasteful LLM polling. Previously, when using background tasks, the LLM had to repeatedly call `task_status` to poll for completion, causing unnecessary API requests.
+task 工具已优化，以消除低效的 LLM 轮询。此前使用后台任务时，LLM 需要反复调用 `task_status` 轮询完成状态，产生了不必要的 API 请求。
 
-## Changes Made
+## 变更内容
 
-### 1. Removed `run_in_background` Parameter
+### 1. 移除 `run_in_background` 参数
 
-The `run_in_background` parameter has been removed from the `task` tool. All subagent tasks now run asynchronously by default, but the tool handles completion automatically.
+`task` 工具已移除 `run_in_background` 参数。现在所有 subagent 任务默认异步执行，但工具会自动处理完成等待。
 
 **Before:**
 ```python
-# LLM had to manage polling
+# 过去需要 LLM 自己管理轮询
 task_id = task(
     subagent_type="bash",
     prompt="Run tests",
     description="Run tests",
     run_in_background=True
 )
-# Then LLM had to poll repeatedly:
+# 然后 LLM 反复轮询：
 while True:
     status = task_status(task_id)
     if completed:
@@ -28,147 +28,147 @@ while True:
 
 **After:**
 ```python
-# Tool blocks until complete, polling happens in backend
+# 工具会阻塞至完成，轮询在后端进行
 result = task(
     subagent_type="bash",
     prompt="Run tests",
     description="Run tests"
 )
-# Result is available immediately after the call returns
+# 调用返回后可直接拿到结果
 ```
 
-### 2. Backend Polling
+### 2. 后端轮询
 
-The `task_tool` now:
-- Starts the subagent task asynchronously
-- Polls for completion in the backend (every 2 seconds)
-- Blocks the tool call until completion
-- Returns the final result directly
+`task_tool` 现在会：
+- 异步启动 subagent 任务
+- 在后端轮询完成状态（每 2 秒）
+- 在任务完成前阻塞工具调用
+- 直接返回最终结果
 
-This means:
-- ✅ LLM makes only ONE tool call
-- ✅ No wasteful LLM polling requests
-- ✅ Backend handles all status checking
-- ✅ Timeout protection (5 minutes max)
+这意味着：
+- ✅ LLM 只需一次工具调用
+- ✅ 不再有低效的 LLM 轮询请求
+- ✅ 状态检查全部由后端处理
+- ✅ 具备超时保护（最多 5 分钟）
 
-### 3. Removed `task_status` from LLM Tools
+### 3. 从 LLM 工具集中移除 `task_status`
 
-The `task_status_tool` is no longer exposed to the LLM. It's kept in the codebase for potential internal/debugging use, but the LLM cannot call it.
+`task_status_tool` 不再暴露给 LLM。代码中仍保留该能力，供内部或调试使用，但 LLM 不能直接调用。
 
-### 4. Updated Documentation
+### 4. 文档更新
 
-- Updated `SUBAGENT_SECTION` in `prompt.py` to remove all references to background tasks and polling
-- Simplified usage examples
-- Made it clear that the tool automatically waits for completion
+- 更新 `prompt.py` 中的 `SUBAGENT_SECTION`，移除后台任务与轮询相关描述
+- 简化使用示例
+- 明确说明工具会自动等待任务完成
 
-## Implementation Details
+## 实现细节
 
-### Polling Logic
+### 轮询逻辑
 
-Located in `src/tools/builtins/task_tool.py`:
+位置：`src/tools/builtins/task_tool.py`
 
 ```python
-# Start background execution
+# 启动后台执行
 task_id = executor.execute_async(prompt)
 
-# Poll for task completion in backend
+# 在后端轮询任务完成状态
 while True:
     result = get_background_task_result(task_id)
 
-    # Check if task completed or failed
+    # 检查任务是否完成或失败
     if result.status == SubagentStatus.COMPLETED:
         return f"[Subagent: {subagent_type}]\n\n{result.result}"
     elif result.status == SubagentStatus.FAILED:
         return f"[Subagent: {subagent_type}] Task failed: {result.error}"
 
-    # Wait before next poll
+    # 下一次轮询前等待
     time.sleep(2)
 
-    # Timeout protection (5 minutes)
+    # 超时保护（5 分钟）
     if poll_count > 150:
         return "Task timed out after 5 minutes"
 ```
 
-### Execution Timeout
+### 执行超时
 
-In addition to polling timeout, subagent execution now has a built-in timeout mechanism:
+除了轮询超时外，subagent 执行本身也新增了内置超时机制：
 
-**Configuration** (`src/subagents/config.py`):
+**配置**（`src/subagents/config.py`）：
 ```python
 @dataclass
 class SubagentConfig:
     # ...
-    timeout_seconds: int = 300  # 5 minutes default
+    timeout_seconds: int = 300  # 默认 5 分钟
 ```
 
-**Thread Pool Architecture**:
+**线程池架构**：
 
-To avoid nested thread pools and resource waste, we use two dedicated thread pools:
+为避免嵌套线程池与资源浪费，采用两个独立线程池：
 
-1. **Scheduler Pool** (`_scheduler_pool`):
-   - Max workers: 4
-   - Purpose: Orchestrates background task execution
-   - Runs `run_task()` function that manages task lifecycle
+1. **调度线程池**（`_scheduler_pool`）：
+    - 最大工作线程：4
+    - 用途：编排后台任务执行
+    - 运行 `run_task()` 负责管理任务生命周期
 
-2. **Execution Pool** (`_execution_pool`):
-   - Max workers: 8 (larger to avoid blocking)
-   - Purpose: Actual subagent execution with timeout support
-   - Runs `execute()` method that invokes the agent
+2. **执行线程池**（`_execution_pool`）：
+    - 最大工作线程：8（更大以避免阻塞）
+    - 用途：实际执行 subagent 并支持超时
+    - 运行 `execute()` 调用 agent
 
-**How it works**:
+**工作方式**：
 ```python
-# In execute_async():
+# 在 execute_async() 中：
 _scheduler_pool.submit(run_task)  # Submit orchestration task
 
-# In run_task():
+# 在 run_task() 中：
 future = _execution_pool.submit(self.execute, task)  # Submit execution
 exec_result = future.result(timeout=timeout_seconds)  # Wait with timeout
 ```
 
-**Benefits**:
-- ✅ Clean separation of concerns (scheduling vs execution)
-- ✅ No nested thread pools
-- ✅ Timeout enforcement at the right level
-- ✅ Better resource utilization
+**收益**：
+- ✅ 职责分离清晰（调度 vs 执行）
+- ✅ 无嵌套线程池
+- ✅ 在正确层级执行超时控制
+- ✅ 资源利用率更高
 
-**Two-Level Timeout Protection**:
-1. **Execution Timeout**: Subagent execution itself has a 5-minute timeout (configurable in SubagentConfig)
-2. **Polling Timeout**: Tool polling has a 5-minute timeout (30 polls × 10 seconds)
+**双层超时保护**：
+1. **执行超时**：subagent 执行本身有 5 分钟超时（可在 `SubagentConfig` 配置）
+2. **轮询超时**：工具轮询也有 5 分钟超时（30 次轮询 × 10 秒）
 
-This ensures that even if subagent execution hangs, the system won't wait indefinitely.
+即便 subagent 执行卡住，系统也不会无限等待。
 
-### Benefits
+### 整体收益
 
-1. **Reduced API Costs**: No more repeated LLM requests for polling
-2. **Simpler UX**: LLM doesn't need to manage polling logic
-3. **Better Reliability**: Backend handles all status checking consistently
-4. **Timeout Protection**: Two-level timeout prevents infinite waiting (execution + polling)
+1. **降低 API 成本**：不再需要重复轮询请求
+2. **更简单的使用方式**：LLM 无需编写轮询逻辑
+3. **更高可靠性**：后端统一处理状态检查
+4. **超时保护完善**：双层超时防止无限等待（执行 + 轮询）
 
-## Testing
+## 测试
 
-To verify the changes work correctly:
+可通过以下方式验证改动：
 
-1. Start a subagent task that takes a few seconds
-2. Verify the tool call blocks until completion
-3. Verify the result is returned directly
-4. Verify no `task_status` calls are made
+1. 启动一个耗时数秒的 subagent 任务
+2. 验证工具调用会阻塞直到完成
+3. 验证结果会直接返回
+4. 验证不会再出现 `task_status` 调用
 
-Example test scenario:
+示例测试场景：
 ```python
-# This should block for ~10 seconds then return result
+# 预期阻塞约 10 秒后返回结果
 result = task(
     subagent_type="bash",
     prompt="sleep 10 && echo 'Done'",
     description="Test task"
 )
-# result should contain "Done"
+# result 应包含 "Done"
 ```
 
-## Migration Notes
+## 迁移说明
 
-For users/code that previously used `run_in_background=True`:
-- Simply remove the parameter
-- Remove any polling logic
-- The tool will automatically wait for completion
+对于之前使用 `run_in_background=True` 的代码：
+- 直接删除该参数
+- 删除手动轮询逻辑
+- 工具会自动等待任务完成
 
-No other changes needed - the API is backward compatible (minus the removed parameter).
+除此之外无需其他改动。除移除该参数外，API 兼容性保持不变。

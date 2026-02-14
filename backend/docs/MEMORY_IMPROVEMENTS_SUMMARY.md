@@ -1,4 +1,4 @@
-# Memory System Improvements - Summary
+# Memory 系统改进总结
 
 ## 改进概述
 
@@ -83,7 +83,7 @@ text = "This is a test string to count tokens accurately."
 
 ## 实现方式
 
-### Middleware 动态注入
+### 中间件动态注入
 
 使用 `before_model` 钩子在**每次 LLM 调用前**注入 memory：
 

@@ -1,204 +1,204 @@
-# Plan Mode with TodoList Middleware
+# TodoList 中间件计划模式
 
-This document describes how to enable and use the Plan Mode feature with TodoList middleware in DeerFlow 2.0.
+本文档说明如何在 DeerFlow 2.0 中启用并使用基于 TodoList 中间件的 Plan Mode 功能。
 
-## Overview
+## 概览
 
-Plan Mode adds a TodoList middleware to the agent, which provides a `write_todos` tool that helps the agent:
-- Break down complex tasks into smaller, manageable steps
-- Track progress as work progresses
-- Provide visibility to users about what's being done
+Plan Mode 会为 Agent 增加 TodoList 中间件，提供 `write_todos` 工具，帮助 Agent：
+- 将复杂任务拆解为更小、可执行的步骤
+- 在执行过程中跟踪进度
+- 向用户展示当前正在做什么
 
-The TodoList middleware is built on LangChain's `TodoListMiddleware`.
+TodoList 中间件基于 LangChain 的 `TodoListMiddleware` 实现。
 
-## Configuration
+## 配置
 
-### Enabling Plan Mode
+### 启用 Plan Mode
 
-Plan mode is controlled via **runtime configuration** through the `is_plan_mode` parameter in the `configurable` section of `RunnableConfig`. This allows you to dynamically enable or disable plan mode on a per-request basis.
+Plan mode 通过**运行时配置**控制：在 `RunnableConfig` 的 `configurable` 中设置 `is_plan_mode`。这样可以按请求动态开启或关闭 plan mode。
 
 ```python
 from langchain_core.runnables import RunnableConfig
 from src.agents.lead_agent.agent import make_lead_agent
 
-# Enable plan mode via runtime configuration
+# 通过运行时配置启用 plan mode
 config = RunnableConfig(
     configurable={
         "thread_id": "example-thread",
         "thinking_enabled": True,
-        "is_plan_mode": True,  # Enable plan mode
+        "is_plan_mode": True,  # 启用 plan mode
     }
 )
 
-# Create agent with plan mode enabled
+    # 创建启用 plan mode 的 agent
 agent = make_lead_agent(config)
 ```
 
-### Configuration Options
+    ### 配置项
 
-- **is_plan_mode** (bool): Whether to enable plan mode with TodoList middleware. Default: `False`
-  - Pass via `config.get("configurable", {}).get("is_plan_mode", False)`
-  - Can be set dynamically for each agent invocation
-  - No global configuration needed
+- **is_plan_mode**（bool）：是否启用含 TodoList 中间件的 plan mode。默认：`False`
+    - 通过 `config.get("configurable", {}).get("is_plan_mode", False)` 读取
+    - 可按每次 agent 调用动态设置
+    - 不需要全局配置
 
-## Default Behavior
+## 默认行为
 
-When plan mode is enabled with default settings, the agent will have access to a `write_todos` tool with the following behavior:
+当以默认设置启用 plan mode 时，agent 将获得 `write_todos` 工具，行为如下：
 
-### When to Use TodoList
+### 何时使用 TodoList
 
-The agent will use the todo list for:
-1. Complex multi-step tasks (3+ distinct steps)
-2. Non-trivial tasks requiring careful planning
-3. When user explicitly requests a todo list
-4. When user provides multiple tasks
+Agent 会在以下场景使用 todo list：
+1. 复杂多步骤任务（3+ 个明确步骤）
+2. 需要仔细规划的非简单任务
+3. 用户明确要求使用 todo list
+4. 用户一次提出多个任务
 
-### When NOT to Use TodoList
+### 何时不使用 TodoList
 
-The agent will skip using the todo list for:
-1. Single, straightforward tasks
-2. Trivial tasks (< 3 steps)
-3. Purely conversational or informational requests
+以下场景通常不使用 todo list：
+1. 单一且直接的任务
+2. 过于简单的任务（< 3 步）
+3. 纯对话或纯信息问答请求
 
-### Task States
+### 任务状态
 
-- **pending**: Task not yet started
-- **in_progress**: Currently working on (can have multiple parallel tasks)
-- **completed**: Task finished successfully
+- **pending**：尚未开始
+- **in_progress**：正在进行（可并行多个）
+- **completed**：已完成
 
-## Usage Examples
+## 使用示例
 
-### Basic Usage
+### 基础用法
 
 ```python
 from langchain_core.runnables import RunnableConfig
 from src.agents.lead_agent.agent import make_lead_agent
 
-# Create agent with plan mode ENABLED
+# 创建启用 plan mode 的 agent
 config_with_plan_mode = RunnableConfig(
     configurable={
         "thread_id": "example-thread",
         "thinking_enabled": True,
-        "is_plan_mode": True,  # TodoList middleware will be added
+        "is_plan_mode": True,  # 将添加 TodoList 中间件
     }
 )
 agent_with_todos = make_lead_agent(config_with_plan_mode)
 
-# Create agent with plan mode DISABLED (default)
+    # 创建禁用 plan mode 的 agent（默认）
 config_without_plan_mode = RunnableConfig(
     configurable={
         "thread_id": "another-thread",
         "thinking_enabled": True,
-        "is_plan_mode": False,  # No TodoList middleware
+        "is_plan_mode": False,  # 不添加 TodoList 中间件
     }
 )
 agent_without_todos = make_lead_agent(config_without_plan_mode)
 ```
 
-### Dynamic Plan Mode per Request
+    ### 按请求动态启用 Plan Mode
 
-You can enable/disable plan mode dynamically for different conversations or tasks:
+你可以针对不同会话或任务动态开启/关闭 plan mode：
 
 ```python
 from langchain_core.runnables import RunnableConfig
 from src.agents.lead_agent.agent import make_lead_agent
 
 def create_agent_for_task(task_complexity: str):
-    """Create agent with plan mode based on task complexity."""
+    """根据任务复杂度创建是否启用 plan mode 的 agent。"""
     is_complex = task_complexity in ["high", "very_high"]
 
     config = RunnableConfig(
         configurable={
             "thread_id": f"task-{task_complexity}",
             "thinking_enabled": True,
-            "is_plan_mode": is_complex,  # Enable only for complex tasks
+            "is_plan_mode": is_complex,  # 仅复杂任务启用
         }
     )
 
     return make_lead_agent(config)
 
-# Simple task - no TodoList needed
+# 简单任务 - 无需 TodoList
 simple_agent = create_agent_for_task("low")
 
-# Complex task - TodoList enabled for better tracking
+# 复杂任务 - 启用 TodoList 便于跟踪
 complex_agent = create_agent_for_task("high")
 ```
 
-## How It Works
+## 工作机制
 
-1. When `make_lead_agent(config)` is called, it extracts `is_plan_mode` from `config.configurable`
-2. The config is passed to `_build_middlewares(config)`
-3. `_build_middlewares()` reads `is_plan_mode` and calls `_create_todo_list_middleware(is_plan_mode)`
-4. If `is_plan_mode=True`, a `TodoListMiddleware` instance is created and added to the middleware chain
-5. The middleware automatically adds a `write_todos` tool to the agent's toolset
-6. The agent can use this tool to manage tasks during execution
-7. The middleware handles the todo list state and provides it to the agent
+1. 调用 `make_lead_agent(config)` 时，从 `config.configurable` 读取 `is_plan_mode`
+2. 配置传入 `_build_middlewares(config)`
+3. `_build_middlewares()` 读取 `is_plan_mode` 并调用 `_create_todo_list_middleware(is_plan_mode)`
+4. 若 `is_plan_mode=True`，创建 `TodoListMiddleware` 并加入中间件链
+5. 中间件自动向 agent 工具集中添加 `write_todos`
+6. agent 在执行中可调用该工具管理任务
+7. 中间件负责维护 todo 状态并提供给 agent
 
-## Architecture
+## 架构
 
 ```
 make_lead_agent(config)
   │
-  ├─> Extracts: is_plan_mode = config.configurable.get("is_plan_mode", False)
+    ├─> 读取: is_plan_mode = config.configurable.get("is_plan_mode", False)
   │
   └─> _build_middlewares(config)
         │
         ├─> ThreadDataMiddleware
         ├─> SandboxMiddleware
-        ├─> SummarizationMiddleware (if enabled via global config)
-        ├─> TodoListMiddleware (if is_plan_mode=True) ← NEW
+        ├─> SummarizationMiddleware（全局配置启用时）
+        ├─> TodoListMiddleware（is_plan_mode=True 时）← 新增
         ├─> TitleMiddleware
         └─> ClarificationMiddleware
 ```
 
-## Implementation Details
+    ## 实现细节
 
-### Agent Module
-- **Location**: `src/agents/lead_agent/agent.py`
-- **Function**: `_create_todo_list_middleware(is_plan_mode: bool)` - Creates TodoListMiddleware if plan mode is enabled
-- **Function**: `_build_middlewares(config: RunnableConfig)` - Builds middleware chain based on runtime config
-- **Function**: `make_lead_agent(config: RunnableConfig)` - Creates agent with appropriate middlewares
+### Agent 模块
+- **位置**：`src/agents/lead_agent/agent.py`
+- **函数**：`_create_todo_list_middleware(is_plan_mode: bool)` - 在启用 plan mode 时创建 TodoListMiddleware
+- **函数**：`_build_middlewares(config: RunnableConfig)` - 根据运行时配置构建中间件链
+- **函数**：`make_lead_agent(config: RunnableConfig)` - 用相应中间件创建 agent
 
-### Runtime Configuration
-Plan mode is controlled via the `is_plan_mode` parameter in `RunnableConfig.configurable`:
+### 运行时配置
+Plan mode 通过 `RunnableConfig.configurable` 中的 `is_plan_mode` 控制：
 ```python
 config = RunnableConfig(
     configurable={
-        "is_plan_mode": True,  # Enable plan mode
-        # ... other configurable options
+        "is_plan_mode": True,  # 启用 plan mode
+        # ... 其他可配置项
     }
 )
 ```
 
-## Key Benefits
+    ## 关键收益
 
-1. **Dynamic Control**: Enable/disable plan mode per request without global state
-2. **Flexibility**: Different conversations can have different plan mode settings
-3. **Simplicity**: No need for global configuration management
-4. **Context-Aware**: Plan mode decision can be based on task complexity, user preferences, etc.
+1. **动态控制**：无需全局状态即可按请求启停 plan mode
+2. **灵活性**：不同会话可采用不同 plan mode 策略
+3. **简单性**：不需要额外的全局配置管理
+4. **上下文感知**：可按任务复杂度、用户偏好等决定是否启用
 
-## Custom Prompts
+## 自定义提示词
 
-DeerFlow uses custom `system_prompt` and `tool_description` for the TodoListMiddleware that match the overall DeerFlow prompt style:
+DeerFlow 为 TodoListMiddleware 使用自定义 `system_prompt` 与 `tool_description`，与整体提示词风格保持一致：
 
-### System Prompt Features
-- Uses XML tags (`<todo_list_system>`) for structure consistency with DeerFlow's main prompt
-- Emphasizes CRITICAL rules and best practices
-- Clear "When to Use" vs "When NOT to Use" guidelines
-- Focuses on real-time updates and immediate task completion
+### System Prompt 特点
+- 使用 XML 标签（`<todo_list_system>`），与 DeerFlow 主提示词结构一致
+- 强调关键规则与最佳实践
+- 明确区分“何时使用”与“何时不使用”
+- 强调实时更新与及时完成
 
-### Tool Description Features
-- Detailed usage scenarios with examples
-- Strong emphasis on NOT using for simple tasks
-- Clear task state definitions (pending, in_progress, completed)
-- Comprehensive best practices section
-- Task completion requirements to prevent premature marking
+### Tool Description 特点
+- 详细场景说明与示例
+- 强调简单任务不应使用
+- 明确任务状态定义（pending、in_progress、completed）
+- 完整最佳实践说明
+- 对“完成”判定设定明确要求，避免过早标记
 
-The custom prompts are defined in `_create_todo_list_middleware()` in `/Users/hetao/workspace/deer-flow/backend/src/agents/lead_agent/agent.py:57`.
+自定义提示词定义在 `_create_todo_list_middleware()` 中，位置：`/Users/hetao/workspace/deer-flow/backend/src/agents/lead_agent/agent.py:57`。
 
-## Notes
+## 备注
 
-- TodoList middleware uses LangChain's built-in `TodoListMiddleware` with **custom DeerFlow-style prompts**
-- Plan mode is **disabled by default** (`is_plan_mode=False`) to maintain backward compatibility
-- The middleware is positioned before `ClarificationMiddleware` to allow todo management during clarification flows
-- Custom prompts emphasize the same principles as DeerFlow's main system prompt (clarity, action-oriented, critical rules)
+- TodoList 中间件基于 LangChain 内置 `TodoListMiddleware`，并使用**DeerFlow 风格自定义提示词**
+- Plan mode **默认关闭**（`is_plan_mode=False`），以保持向后兼容
+- 该中间件位于 `ClarificationMiddleware` 之前，便于在澄清流程中管理 todo
+- 自定义提示词遵循 DeerFlow 主系统提示词原则（清晰、行动导向、关键规则）

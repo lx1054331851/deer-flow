@@ -1,27 +1,27 @@
-# TODO List
+# 待办列表
 
-## Completed Features
+## 已完成功能
 
-- [x] Launch the sandbox only after the first file system or bash tool is called
-- [x] Add Clarification Process for the whole process
-- [x] Implement Context Summarization Mechanism to avoid context explosion
-- [x] Integrate MCP (Model Context Protocol) for extensible tools
-- [x] Add file upload support with automatic document conversion
-- [x] Implement automatic thread title generation
-- [x] Add Plan Mode with TodoList middleware
-- [x] Add vision model support with ViewImageMiddleware
-- [x] Skills system with SKILL.md format
+- [x] 仅在首次调用文件系统或 bash 工具后再启动沙箱
+- [x] 为整个流程添加澄清流程（Clarification Process）
+- [x] 实现上下文摘要机制，避免上下文膨胀
+- [x] 集成 MCP（Model Context Protocol）以支持可扩展工具
+- [x] 添加文件上传支持，并自动进行文档转换
+- [x] 实现自动线程标题生成
+- [x] 添加计划模式（Plan Mode）与 TodoList 中间件
+- [x] 通过 ViewImageMiddleware 添加视觉模型支持
+- [x] 基于 SKILL.md 格式的技能系统
 
-## Planned Features
+## 计划中的功能
 
-- [ ] Pooling the sandbox resources to reduce the number of sandbox containers
-- [ ] Add authentication/authorization layer
-- [ ] Implement rate limiting
-- [ ] Add metrics and monitoring
-- [ ] Support for more document formats in upload
-- [ ] Skill marketplace / remote skill installation
+- [ ] 对沙箱资源进行池化，减少沙箱容器数量
+- [ ] 添加认证/授权层
+- [ ] 实现限流
+- [ ] 添加指标与监控
+- [ ] 在上传中支持更多文档格式
+- [ ] 技能市场 / 远程技能安装
 
-## Resolved Issues
+## 已解决问题
 
-- [x] Make sure that no duplicated files in `state.artifacts`
-- [x] Long thinking but with empty content (answer inside thinking process)
+- [x] 确保 `state.artifacts` 中不会出现重复文件
+- [x] 长思考但内容为空（答案出现在思考过程里）

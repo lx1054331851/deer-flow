@@ -1,22 +1,22 @@
-# Architecture Overview
+# 架构总览
 
-This document provides a comprehensive overview of the DeerFlow backend architecture.
+本文档提供 DeerFlow 后端架构的全面说明。
 
-## System Architecture
+## 系统架构
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                              Client (Browser)                             │
+│                              客户端（浏览器）                              │
 └─────────────────────────────────┬────────────────────────────────────────┘
                                   │
                                   ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                          Nginx (Port 2026)                               │
-│                    Unified Reverse Proxy Entry Point                      │
+│                          Nginx（端口 2026）                               │
+│                        统一反向代理入口                                    │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │  /api/langgraph/*  →  LangGraph Server (2024)                      │  │
-│  │  /api/*            →  Gateway API (8001)                           │  │
-│  │  /*                →  Frontend (3000)                               │  │
+│  │  /api/langgraph/*  →  LangGraph Server（2024）                    │  │
+│  │  /api/*            →  Gateway API（8001）                         │  │
+│  │  /*                →  Frontend（3000）                             │  │
 │  └────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────┬────────────────────────────────────────┘
                                   │
@@ -25,46 +25,46 @@ This document provides a comprehensive overview of the DeerFlow backend architec
           ▼                       ▼                       ▼
 ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
 │   LangGraph Server  │ │    Gateway API      │ │     Frontend        │
-│     (Port 2024)     │ │    (Port 8001)      │ │    (Port 3000)      │
+│     （端口 2024）    │ │    （端口 8001）     │ │    （端口 3000）     │
 │                     │ │                     │ │                     │
-│  - Agent Runtime    │ │  - Models API       │ │  - Next.js App      │
-│  - Thread Mgmt      │ │  - MCP Config       │ │  - React UI         │
-│  - SSE Streaming    │ │  - Skills Mgmt      │ │  - Chat Interface   │
-│  - Checkpointing    │ │  - File Uploads     │ │                     │
-│                     │ │  - Artifacts        │ │                     │
+│  - Agent 运行时      │ │  - 模型 API         │ │  - Next.js 应用      │
+│  - 线程管理          │ │  - MCP 配置         │ │  - React UI         │
+│  - SSE 流式响应      │ │  - 技能管理         │ │  - 聊天界面          │
+│  - Checkpointing    │ │  - 文件上传         │ │                     │
+│                     │ │  - 产物服务         │ │                     │
 └─────────────────────┘ └─────────────────────┘ └─────────────────────┘
           │                       │
           │     ┌─────────────────┘
           │     │
           ▼     ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         Shared Configuration                              │
+│                             共享配置                                      │
 │  ┌─────────────────────────┐  ┌────────────────────────────────────────┐ │
 │  │      config.yaml        │  │      extensions_config.json            │ │
-│  │  - Models               │  │  - MCP Servers                         │ │
-│  │  - Tools                │  │  - Skills State                        │ │
-│  │  - Sandbox              │  │                                        │ │
-│  │  - Summarization        │  │                                        │ │
+│  │  - 模型                 │  │  - MCP Servers                         │ │
+│  │  - 工具                 │  │  - Skills 状态                         │ │
+│  │  - 沙箱                 │  │                                        │ │
+│  │  - 摘要策略             │  │                                        │ │
 │  └─────────────────────────┘  └────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Component Details
+## 组件详情
 
 ### LangGraph Server
 
-The LangGraph server is the core agent runtime, built on LangGraph for robust multi-agent workflow orchestration.
+LangGraph Server 是核心 Agent 运行时，基于 LangGraph 构建，用于可靠的多 Agent 工作流编排。
 
-**Entry Point**: `src/agents/lead_agent/agent.py:make_lead_agent`
+**入口**：`src/agents/lead_agent/agent.py:make_lead_agent`
 
-**Key Responsibilities**:
-- Agent creation and configuration
-- Thread state management
-- Middleware chain execution
-- Tool execution orchestration
-- SSE streaming for real-time responses
+**关键职责**：
+- Agent 创建与配置
+- 线程状态管理
+- 中间件链执行
+- 工具执行编排
+- 实时响应的 SSE 流式输出
 
-**Configuration**: `langgraph.json`
+**配置**：`langgraph.json`
 
 ```json
 {
@@ -77,77 +77,76 @@ The LangGraph server is the core agent runtime, built on LangGraph for robust mu
 
 ### Gateway API
 
-FastAPI application providing REST endpoints for non-agent operations.
+基于 FastAPI 的应用，为非 Agent 操作提供 REST 接口。
 
-**Entry Point**: `src/gateway/app.py`
+**入口**：`src/gateway/app.py`
 
-**Routers**:
-- `models.py` - `/api/models` - Model listing and details
-- `mcp.py` - `/api/mcp` - MCP server configuration
-- `skills.py` - `/api/skills` - Skills management
-- `uploads.py` - `/api/threads/{id}/uploads` - File upload
-- `artifacts.py` - `/api/threads/{id}/artifacts` - Artifact serving
+**路由**：
+- `models.py` - `/api/models` - 模型列表与详情
+- `mcp.py` - `/api/mcp` - MCP 服务配置
+- `skills.py` - `/api/skills` - 技能管理
+- `uploads.py` - `/api/threads/{id}/uploads` - 文件上传
+- `artifacts.py` - `/api/threads/{id}/artifacts` - 产物访问
 
-### Agent Architecture
+### Agent 架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           make_lead_agent(config)                        │
+│                           make_lead_agent(config)                      │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                            Middleware Chain                              │
+│                            中间件链                                     │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │ 1. ThreadDataMiddleware  - Initialize workspace/uploads/outputs  │   │
-│  │ 2. UploadsMiddleware     - Process uploaded files               │   │
-│  │ 3. SandboxMiddleware     - Acquire sandbox environment          │   │
-│  │ 4. SummarizationMiddleware - Context reduction (if enabled)     │   │
-│  │ 5. TitleMiddleware       - Auto-generate titles                 │   │
-│  │ 6. TodoListMiddleware    - Task tracking (if plan_mode)         │   │
-│  │ 7. ViewImageMiddleware   - Vision model support                 │   │
-│  │ 8. ClarificationMiddleware - Handle clarifications              │   │
+│  │ 1. ThreadDataMiddleware    - 初始化 workspace/uploads/outputs   │   │
+│  │ 2. UploadsMiddleware       - 处理上传文件                        │   │
+│  │ 3. SandboxMiddleware       - 获取沙箱环境                        │   │
+│  │ 4. SummarizationMiddleware - 上下文压缩（启用时）                │   │
+│  │ 5. TitleMiddleware         - 自动生成标题                        │   │
+│  │ 6. TodoListMiddleware      - 任务追踪（plan_mode）               │   │
+│  │ 7. ViewImageMiddleware     - 视觉模型支持                        │   │
+│  │ 8. ClarificationMiddleware - 处理澄清问题                        │   │
 │  └──────────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              Agent Core                                  │
+│                              Agent 核心                                 │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │      Model       │  │      Tools       │  │    System Prompt     │   │
-│  │  (from factory)  │  │  (configured +   │  │  (with skills)       │   │
-│  │                  │  │   MCP + builtin) │  │                      │   │
+│  │      模型        │  │      工具        │  │    系统提示词         │   │
+│  │  (from factory)  │  │ (配置 + MCP +内置)│ │   (含技能注入)       │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Thread State
+### 线程状态
 
-The `ThreadState` extends LangGraph's `AgentState` with additional fields:
+`ThreadState` 在 LangGraph 的 `AgentState` 基础上扩展了以下字段：
 
 ```python
 class ThreadState(AgentState):
-    # Core state from AgentState
+   # AgentState 核心状态
     messages: list[BaseMessage]
 
-    # DeerFlow extensions
-    sandbox: dict             # Sandbox environment info
-    artifacts: list[str]      # Generated file paths
-    thread_data: dict         # {workspace, uploads, outputs} paths
-    title: str | None         # Auto-generated conversation title
-    todos: list[dict]         # Task tracking (plan mode)
-    viewed_images: dict       # Vision model image data
+   # DeerFlow 扩展
+   sandbox: dict             # 沙箱环境信息
+   artifacts: list[str]      # 生成文件路径
+   thread_data: dict         # {workspace, uploads, outputs} 路径
+   title: str | None         # 自动生成会话标题
+   todos: list[dict]         # 任务跟踪（计划模式）
+   viewed_images: dict       # 视觉模型图片数据
 ```
 
-### Sandbox System
+### 沙箱系统
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           Sandbox Architecture                           │
+│                              沙箱架构                                   │
 └─────────────────────────────────────────────────────────────────────────┘
 
                       ┌─────────────────────────┐
-                      │    SandboxProvider      │ (Abstract)
+                      │    SandboxProvider      │（抽象）
                       │  - acquire()            │
                       │  - get()                │
                       │  - release()            │
@@ -160,13 +159,13 @@ class ThreadState(AgentState):
 │  LocalSandboxProvider   │              │  AioSandboxProvider     │
 │  (src/sandbox/local.py) │              │  (src/community/)       │
 │                         │              │                         │
-│  - Singleton instance   │              │  - Docker-based         │
-│  - Direct execution     │              │  - Isolated containers  │
-│  - Development use      │              │  - Production use       │
+│  - 单例实例             │              │  - 基于 Docker          │
+│  - 直接执行             │              │  - 容器隔离             │
+│  - 开发环境使用         │              │  - 生产环境使用         │
 └─────────────────────────┘              └─────────────────────────┘
 
                       ┌─────────────────────────┐
-                      │        Sandbox          │ (Abstract)
+                      │        Sandbox          │（抽象）
                       │  - execute_command()    │
                       │  - read_file()          │
                       │  - write_file()         │
@@ -174,25 +173,25 @@ class ThreadState(AgentState):
                       └─────────────────────────┘
 ```
 
-**Virtual Path Mapping**:
+**虚拟路径映射**：
 
-| Virtual Path | Physical Path |
+| 虚拟路径 | 物理路径 |
 |-------------|---------------|
 | `/mnt/user-data/workspace` | `backend/.deer-flow/threads/{thread_id}/user-data/workspace` |
 | `/mnt/user-data/uploads` | `backend/.deer-flow/threads/{thread_id}/user-data/uploads` |
 | `/mnt/user-data/outputs` | `backend/.deer-flow/threads/{thread_id}/user-data/outputs` |
 | `/mnt/skills` | `deer-flow/skills/` |
 
-### Tool System
+### 工具系统
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                            Tool Sources                                  │
+│                              工具来源                                   │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
-│   Built-in Tools    │  │  Configured Tools   │  │     MCP Tools       │
-│  (src/tools/)       │  │  (config.yaml)      │  │  (extensions.json)  │
+│      内置工具       │  │    配置工具         │  │      MCP 工具        │
+│    (src/tools/)     │  │   (config.yaml)     │  │ (extensions.json)    │
 ├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤
 │ - present_file      │  │ - web_search        │  │ - github            │
 │ - ask_clarification │  │ - web_fetch         │  │ - filesystem        │
@@ -212,12 +211,12 @@ class ThreadState(AgentState):
                       └─────────────────────────┘
 ```
 
-### Model Factory
+### 模型工厂
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          Model Factory                                   │
-│                     (src/models/factory.py)                              │
+│                              模型工厂                                   │
+│                        (src/models/factory.py)                         │
 └─────────────────────────────────────────────────────────────────────────┘
 
 config.yaml:
@@ -242,29 +241,29 @@ config.yaml:
                                    │
                                    ▼
                       ┌─────────────────────────┐
-                      │   resolve_class()       │
-                      │  (reflection system)    │
+                      │     resolve_class()     │
+                      │     （反射系统）        │
                       └────────────┬────────────┘
                                    │
                                    ▼
                       ┌─────────────────────────┐
-                      │   BaseChatModel         │
-                      │  (LangChain instance)   │
+                      │     BaseChatModel       │
+                      │   （LangChain 实例）    │
                       └─────────────────────────┘
 ```
 
-**Supported Providers**:
+**支持的提供商**：
 - OpenAI (`langchain_openai:ChatOpenAI`)
 - Anthropic (`langchain_anthropic:ChatAnthropic`)
 - DeepSeek (`langchain_deepseek:ChatDeepSeek`)
-- Custom via LangChain integrations
+- 通过 LangChain 集成的自定义提供商
 
-### MCP Integration
+### MCP 集成
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          MCP Integration                                 │
-│                        (src/mcp/manager.py)                              │
+│                              MCP 集成                                   │
+│                         (src/mcp/manager.py)                            │
 └─────────────────────────────────────────────────────────────────────────┘
 
 extensions_config.json:
@@ -297,29 +296,29 @@ extensions_config.json:
        └───────────┘        └───────────┘        └───────────┘
 ```
 
-### Skills System
+### 技能系统
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          Skills System                                   │
-│                       (src/skills/loader.py)                             │
+│                              技能系统                                   │
+│                         (src/skills/loader.py)                          │
 └─────────────────────────────────────────────────────────────────────────┘
 
-Directory Structure:
+目录结构：
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ skills/                                                                  │
-│ ├── public/                        # Public skills (committed)           │
+│ ├── public/                        # 公共技能（已提交）                  │
 │ │   ├── pdf-processing/                                                 │
 │ │   │   └── SKILL.md                                                    │
 │ │   ├── frontend-design/                                                │
 │ │   │   └── SKILL.md                                                    │
 │ │   └── ...                                                             │
-│ └── custom/                        # Custom skills (gitignored)          │
+│ └── custom/                        # 自定义技能（gitignored）            │
 │     └── user-installed/                                                 │
 │         └── SKILL.md                                                    │
 └─────────────────────────────────────────────────────────────────────────┘
 
-SKILL.md Format:
+SKILL.md 格式：
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ ---                                                                      │
 │ name: PDF Processing                                                     │
@@ -332,63 +331,63 @@ SKILL.md Format:
 │ ---                                                                      │
 │                                                                          │
 │ # Skill Instructions                                                     │
-│ Content injected into system prompt...                                   │
+│ 内容会注入到系统提示词中...                                              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Request Flow
+### 请求流
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         Request Flow Example                             │
-│                    User sends message to agent                           │
+│                           请求流示例                                    │
+│                         用户向 Agent 发送消息                            │
 └─────────────────────────────────────────────────────────────────────────┘
 
 1. Client → Nginx
    POST /api/langgraph/threads/{thread_id}/runs
    {"input": {"messages": [{"role": "user", "content": "Hello"}]}}
 
-2. Nginx → LangGraph Server (2024)
-   Proxied to LangGraph server
+2. Nginx → LangGraph Server（2024）
+   反向代理到 LangGraph 服务
 
 3. LangGraph Server
-   a. Load/create thread state
-   b. Execute middleware chain:
-      - ThreadDataMiddleware: Set up paths
-      - UploadsMiddleware: Inject file list
-      - SandboxMiddleware: Acquire sandbox
-      - SummarizationMiddleware: Check token limits
-      - TitleMiddleware: Generate title if needed
-      - TodoListMiddleware: Load todos (if plan mode)
-      - ViewImageMiddleware: Process images
-      - ClarificationMiddleware: Check for clarifications
+   a. 加载/创建线程状态
+   b. 执行中间件链：
+      - ThreadDataMiddleware：设置路径
+      - UploadsMiddleware：注入文件列表
+      - SandboxMiddleware：获取沙箱
+      - SummarizationMiddleware：检查 token 限制
+      - TitleMiddleware：按需生成标题
+      - TodoListMiddleware：加载 todo（计划模式）
+      - ViewImageMiddleware：处理图片
+      - ClarificationMiddleware：检查澄清需求
 
-   c. Execute agent:
-      - Model processes messages
-      - May call tools (bash, web_search, etc.)
-      - Tools execute via sandbox
-      - Results added to messages
+   c. 执行 agent：
+      - 模型处理消息
+      - 可能调用工具（bash、web_search 等）
+      - 工具通过沙箱执行
+      - 结果写回消息
 
-   d. Stream response via SSE
+   d. 通过 SSE 流式返回响应
 
-4. Client receives streaming response
+4. Client 接收流式响应
 ```
 
-## Data Flow
+## 数据流
 
-### File Upload Flow
+### 文件上传流
 
 ```
-1. Client uploads file
+1. 客户端上传文件
    POST /api/threads/{thread_id}/uploads
    Content-Type: multipart/form-data
 
-2. Gateway receives file
-   - Validates file
-   - Stores in .deer-flow/threads/{thread_id}/user-data/uploads/
-   - If document: converts to Markdown via markitdown
+2. Gateway 接收文件
+   - 校验文件
+   - 存储到 .deer-flow/threads/{thread_id}/user-data/uploads/
+   - 若为文档：通过 markitdown 转为 Markdown
 
-3. Returns response
+3. 返回响应
    {
      "files": [{
        "filename": "doc.pdf",
@@ -398,67 +397,67 @@ SKILL.md Format:
      }]
    }
 
-4. Next agent run
-   - UploadsMiddleware lists files
-   - Injects file list into messages
-   - Agent can access via virtual_path
+4. 下一次 agent 运行
+   - UploadsMiddleware 列出文件
+   - 将文件列表注入消息
+   - Agent 可通过 virtual_path 访问
 ```
 
-### Configuration Reload
+### 配置重载
 
 ```
-1. Client updates MCP config
+1. 客户端更新 MCP 配置
    PUT /api/mcp/config
 
-2. Gateway writes extensions_config.json
-   - Updates mcpServers section
-   - File mtime changes
+2. Gateway 写入 extensions_config.json
+   - 更新 mcpServers 段
+   - 文件 mtime 变化
 
-3. MCP Manager detects change
-   - get_cached_mcp_tools() checks mtime
-   - If changed: reinitializes MCP client
-   - Loads updated server configurations
+3. MCP Manager 检测到变化
+   - get_cached_mcp_tools() 检查 mtime
+   - 若有变化：重新初始化 MCP client
+   - 加载更新后的服务配置
 
-4. Next agent run uses new tools
+4. 下一次 agent 运行即使用新工具
 ```
 
-## Security Considerations
+## 安全性考量
 
-### Sandbox Isolation
+### 沙箱隔离
 
-- Agent code executes within sandbox boundaries
-- Local sandbox: Direct execution (development only)
-- Docker sandbox: Container isolation (production recommended)
-- Path traversal prevention in file operations
+- Agent 代码在沙箱边界内执行
+- 本地沙箱：直接执行（仅开发环境）
+- Docker 沙箱：容器隔离（推荐生产环境）
+- 文件操作中防止路径穿越
 
-### API Security
+### API 安全
 
-- Thread isolation: Each thread has separate data directories
-- File validation: Uploads checked for path safety
-- Environment variable resolution: Secrets not stored in config
+- 线程隔离：每个线程独立数据目录
+- 文件校验：上传路径安全检查
+- 环境变量解析：密钥不落盘到配置文件
 
-### MCP Security
+### MCP 安全
 
-- Each MCP server runs in its own process
-- Environment variables resolved at runtime
-- Servers can be enabled/disabled independently
+- 每个 MCP 服务独立进程运行
+- 环境变量在运行时解析
+- 服务可独立启用/禁用
 
-## Performance Considerations
+## 性能考量
 
-### Caching
+### 缓存
 
-- MCP tools cached with file mtime invalidation
-- Configuration loaded once, reloaded on file change
-- Skills parsed once at startup, cached in memory
+- MCP 工具按文件 mtime 失效重建
+- 配置首次加载，文件变化时重载
+- 技能启动时解析并缓存到内存
 
-### Streaming
+### 流式
 
-- SSE used for real-time response streaming
-- Reduces time to first token
-- Enables progress visibility for long operations
+- 使用 SSE 进行实时响应流式传输
+- 降低首 token 延迟
+- 长任务可见进度
 
-### Context Management
+### 上下文管理
 
-- Summarization middleware reduces context when limits approached
-- Configurable triggers: tokens, messages, or fraction
-- Preserves recent messages while summarizing older ones
+- 当接近限制时，摘要中间件会压缩上下文
+- 可配置触发条件：tokens、消息数、或比例
+- 保留近期消息并摘要较早消息
