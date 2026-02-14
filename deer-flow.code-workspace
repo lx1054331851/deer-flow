@@ -9,8 +9,8 @@
     "python-envs.pythonProjects": [
       {
         "path": "backend",
-        "envManager": "ms-python.python:venv",
-        "packageManager": "ms-python.python:pip",
+        "envManager": "ms-python.python:conda",
+        "packageManager": "ms-python.python:conda",
         "workspace": "deer-flow"
       }
     ]
