@@ -5,6 +5,7 @@
     }
   ],
   "settings": {
+    "python.terminal.useEnvFile": true,
     "python-envs.pythonProjects": [
       {
         "path": "backend",
