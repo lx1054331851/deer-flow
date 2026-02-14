@@ -1,22 +1,23 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/core/i18n/hooks";
 
 import ProgressiveSkillsAnimation from "../progressive-skills-animation";
 import { Section } from "../section";
 
 export function SkillsSection({ className }: { className?: string }) {
+  const { t } = useI18n();
+
   return (
     <Section
       className={cn("h-[calc(100vh-64px)] w-full bg-white/2", className)}
-      title="Agent Skills"
+      title={t.landing.sections.skills.title}
       subtitle={
         <div>
-          Agent Skills are loaded progressively — only what&apos;s needed, when
-          it&apos;s needed.
+          {t.landing.sections.skills.subtitleLine1}
           <br />
-          Extend DeerFlow with your own skill files, or use our built-in
-          library.
+          {t.landing.sections.skills.subtitleLine2}
         </div>
       }
     >

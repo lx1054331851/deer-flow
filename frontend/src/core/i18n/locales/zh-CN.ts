@@ -51,7 +51,7 @@ export const zhCN: Translations = {
     description:
       "欢迎使用 🦌 DeerFlow，一个完全开源的超级智能体。通过内置和自定义的 Skills，\nDeerFlow 可以帮你搜索网络、分析数据，还能为你生成幻灯片、\n图片、视频、播客及网页等，几乎可以做任何事情。",
 
-    createYourOwnSkill: "创建你自己的 Agent SKill",
+    createYourOwnSkill: "创建你自己的 Agent Skill",
     createYourOwnSkillDescription:
       "创建你的 Agent Skill 来释放 DeerFlow 的潜力。通过自定义技能，DeerFlow\n可以帮你搜索网络、分析数据，还能为你生成幻灯片、\n网页等作品，几乎可以做任何事情。",
   },
@@ -175,6 +175,140 @@ export const zhCN: Translations = {
     chats: "对话",
     newChat: "新对话",
     untitled: "未命名",
+  },
+
+  // Landing
+  landing: {
+    header: {
+      starOnGithub: "在 GitHub 上 Star",
+    },
+    hero: {
+      words: [
+        "深度研究",
+        "收集数据",
+        "分析数据",
+        "生成网页",
+        "氛围编程",
+        "生成幻灯片",
+        "生成图片",
+        "生成播客",
+        "生成视频",
+        "生成歌曲",
+        "整理邮件",
+        "无所不能",
+        "学习一切",
+      ],
+      withDeerFlow: "使用 DeerFlow",
+      descriptionLine1: "一个开源的超级智能体框架，能研究、编码与创作。",
+      descriptionLine2:
+        "借助沙箱、记忆、工具、技能与子代理，它可以处理",
+      descriptionLine3: "从几分钟到数小时不等的不同复杂度任务。",
+      getStarted: "开始体验 2.0",
+    },
+    footer: {
+      quote: "\"源于开源，回馈开源。\"",
+      license: "基于 MIT 协议授权",
+    },
+    sections: {
+      caseStudies: {
+        title: "案例展示",
+        subtitle: "看看 DeerFlow 在真实场景中的应用",
+        items: [
+          {
+            threadId: "7cfa5f8f-a2f8-47ad-acbd-da7137baf990",
+            title: "预测 2026 年智能体趋势与机会",
+            description:
+              "生成一份深度研究网页报告，预测 2026 年智能体技术的发展趋势与机会。",
+          },
+          {
+            threadId: "4f3e55ee-f853-43db-bfb3-7d1a411f03cb",
+            title: "基于《傲慢与偏见》生成视频",
+            description:
+              "检索小说《傲慢与偏见》中的特定场景，并基于这些场景生成视频和参考图片。",
+          },
+          {
+            threadId: "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+            title: "哆啦 A 梦讲解 MOE 架构",
+            description:
+              "生成哆啦 A 梦漫画，用青少年易懂的方式解释 MOE 架构。",
+          },
+          {
+            threadId: "ad76c455-5bf9-4335-8517-fc03834ab828",
+            title: "泰坦尼克号数据集探索分析",
+            description:
+              "探索泰坦尼克号数据集，并结合可视化与洞察识别影响生存率的关键因素。",
+          },
+          {
+            threadId: "d3e5adaf-084c-4dd5-9d29-94f1d6bccd98",
+            title: "观看 Y Combinator 视频并做深度研究",
+            description:
+              "观看给定的 Y Combinator YouTube 视频，并深入研究其面向技术创业者的建议。",
+          },
+          {
+            threadId: "3823e443-4e2b-4679-b496-a9506eae462b",
+            title: "收集并总结李飞飞博士播客",
+            description:
+              "收集李飞飞博士近 6 个月的播客出镜内容，并汇总为综合报告。",
+          },
+        ],
+      },
+      skills: {
+        title: "智能体技能",
+        subtitleLine1: "技能按需渐进加载 —— 在需要时才加载所需能力。",
+        subtitleLine2: "你可添加自定义技能文件，也可使用内置技能库。",
+      },
+      sandbox: {
+        title: "智能体运行环境",
+        subtitle:
+          "我们为 DeerFlow 提供了一台“电脑”，可执行命令、管理文件并运行长任务——全程在安全的 Docker 沙箱中进行。",
+        openSource: "开源",
+        name: "AIO 沙箱",
+        description:
+          "推荐使用 All-in-One Sandbox，它在一个 Docker 容器中整合 Browser、Shell、File、MCP 与 VSCode Server。",
+        tags: ["隔离", "安全", "持久化", "可挂载文件系统", "长时运行"],
+      },
+      whatsNew: {
+        title: "DeerFlow 2.0 有哪些新特性",
+        subtitle: "DeerFlow 正从深度研究智能体进化为全栈超级智能体",
+        features: [
+          {
+            label: "上下文工程",
+            title: "长/短期记忆",
+            description: "智能体现在能更好地理解你",
+          },
+          {
+            label: "长任务运行",
+            title: "规划与子任务拆分",
+            description: "先规划、再推理，可串行或并行执行复杂任务",
+          },
+          {
+            label: "可扩展",
+            title: "技能与工具",
+            description: "即插即用，甚至可替换内置工具，打造你想要的智能体",
+          },
+          {
+            label: "持久化",
+            title: "带文件系统的沙箱",
+            description: "可读、可写、可执行，如同真实电脑",
+          },
+          {
+            label: "灵活",
+            title: "多模型支持",
+            description: "支持豆包、DeepSeek、OpenAI、Gemini 等",
+          },
+          {
+            label: "免费",
+            title: "开源",
+            description: "MIT 协议、自托管、完全可控",
+          },
+        ],
+      },
+      community: {
+        title: "加入社区",
+        subtitle: "贡献你的创意，一起塑造 DeerFlow 的未来。协作、创新、共同成长。",
+        button: "立即贡献",
+      },
+    },
   },
 
   // Tool calls

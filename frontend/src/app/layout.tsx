@@ -8,10 +8,21 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { I18nProvider } from "@/core/i18n/context";
 import { detectLocaleServer } from "@/core/i18n/server";
 
-export const metadata: Metadata = {
-  title: "DeerFlow",
-  description: "A LangChain-based framework for building super agents.",
+const metadataByLocale: Record<"en-US" | "zh-CN", Metadata> = {
+  "en-US": {
+    title: "DeerFlow",
+    description: "A LangChain-based framework for building super agents.",
+  },
+  "zh-CN": {
+    title: "DeerFlow",
+    description: "一个基于 LangChain 的超级智能体构建框架。",
+  },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await detectLocaleServer();
+  return metadataByLocale[locale] ?? metadataByLocale["en-US"];
+}
 
 const geist = Geist({
   subsets: ["latin"],

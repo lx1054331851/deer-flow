@@ -180,6 +180,148 @@ export const enUS: Translations = {
     untitled: "Untitled",
   },
 
+  // Landing
+  landing: {
+    header: {
+      starOnGithub: "Star on GitHub",
+    },
+    hero: {
+      words: [
+        "Deep Research",
+        "Collect Data",
+        "Analyze Data",
+        "Generate Webpages",
+        "Vibe Coding",
+        "Generate Slides",
+        "Generate Images",
+        "Generate Podcasts",
+        "Generate Videos",
+        "Generate Songs",
+        "Organize Emails",
+        "Do Anything",
+        "Learn Anything",
+      ],
+      withDeerFlow: "with DeerFlow",
+      descriptionLine1:
+        "An open-source SuperAgent harness that researches, codes, and creates.",
+      descriptionLine2:
+        "With the help of sandboxes, memories, tools, skills and subagents, it handles",
+      descriptionLine3:
+        "different levels of tasks that could take minutes to hours.",
+      getStarted: "Get Started with 2.0",
+    },
+    footer: {
+      quote: "\"Originated from Open Source, give back to Open Source.\"",
+      license: "Licensed under MIT License",
+    },
+    sections: {
+      caseStudies: {
+        title: "Case Studies",
+        subtitle: "See how DeerFlow is used in the wild",
+        items: [
+          {
+            threadId: "7cfa5f8f-a2f8-47ad-acbd-da7137baf990",
+            title: "Forecast 2026 Agent Trends and Opportunities",
+            description:
+              "Create a webpage with a Deep Research report forecasting the agent technology trends and opportunities in 2026.",
+          },
+          {
+            threadId: "4f3e55ee-f853-43db-bfb3-7d1a411f03cb",
+            title: "Generate a Video Based On the Novel \"Pride and Prejudice\"",
+            description:
+              "Search the specific scene from the novel \"Pride and Prejudice\", then generate a video as well as a reference image based on the scenes.",
+          },
+          {
+            threadId: "21cfea46-34bd-4aa6-9e1f-3009452fbeb9",
+            title: "Doraemon Explains the MOE Architecture",
+            description:
+              "Generate a Doraemon comic strip explaining the MOE architecture to the teenagers who are interested in AI.",
+          },
+          {
+            threadId: "ad76c455-5bf9-4335-8517-fc03834ab828",
+            title: "An Exploratory Data Analysis of the Titanic Dataset",
+            description:
+              "Explore the Titanic dataset and identify the key factors that influenced survival rates with visualizations and insights.",
+          },
+          {
+            threadId: "d3e5adaf-084c-4dd5-9d29-94f1d6bccd98",
+            title: "Watch Y Combinator's Video then Conduct a Deep Research",
+            description:
+              "Watch the given Y Combinator's YouTube video and conduct a deep research on the YC's tips for technical startup founders.",
+          },
+          {
+            threadId: "3823e443-4e2b-4679-b496-a9506eae462b",
+            title: "Collect and Summarize Dr. Fei Fei Li's Podcasts",
+            description:
+              "Collect all the podcast appearances of Dr. Fei Fei Li in the last 6 months, then summarize them into a comprehensive report.",
+          },
+        ],
+      },
+      skills: {
+        title: "Agent Skills",
+        subtitleLine1:
+          "Agent Skills are loaded progressively — only what's needed, when it's needed.",
+        subtitleLine2:
+          "Extend DeerFlow with your own skill files, or use our built-in library.",
+      },
+      sandbox: {
+        title: "Agent Runtime Environment",
+        subtitle:
+          'We give DeerFlow a "computer", which can execute commands, manage files, and run long tasks — all in a secure Docker-based sandbox',
+        openSource: "Open-source",
+        name: "AIO Sandbox",
+        description:
+          "We recommend using All-in-One Sandbox that combines Browser, Shell, File, MCP and VSCode Server in a single Docker container.",
+        tags: ["Isolated", "Safe", "Persistent", "Mountable FS", "Long-running"],
+      },
+      whatsNew: {
+        title: "Whats New in DeerFlow 2.0",
+        subtitle:
+          "DeerFlow is now evolving from a Deep Research agent into a full-stack Super Agent",
+        features: [
+          {
+            label: "Context Engineering",
+            title: "Long/Short-term Memory",
+            description: "Now the agent can better understand you",
+          },
+          {
+            label: "Long Task Running",
+            title: "Planning and Sub-tasking",
+            description:
+              "Plans ahead, reasons through complexity, then executes sequentially or in parallel",
+          },
+          {
+            label: "Extensible",
+            title: "Skills and Tools",
+            description:
+              "Plug, play, or even swap built-in tools. Build the agent you want.",
+          },
+          {
+            label: "Persistent",
+            title: "Sandbox with File System",
+            description: "Read, write, run — like a real computer",
+          },
+          {
+            label: "Flexible",
+            title: "Multi-Model Support",
+            description: "Doubao, DeepSeek, OpenAI, Gemini, etc.",
+          },
+          {
+            label: "Free",
+            title: "Open Source",
+            description: "MIT License, self-hosted, full control",
+          },
+        ],
+      },
+      community: {
+        title: "Join the Community",
+        subtitle:
+          "Contribute brilliant ideas to shape the future of DeerFlow. Collaborate, innovate, and make impacts.",
+        button: "Contribute Now",
+      },
+    },
+  },
+
   // Tool calls
   toolCalls: {
     moreSteps: (count: number) => `${count} more step${count === 1 ? "" : "s"}`,

@@ -74,13 +74,13 @@ export interface Translations {
     }[];
     suggestionsCreate: (
       | {
-          suggestion: string;
-          prompt: string;
-          icon: LucideIcon;
-        }
+        suggestion: string;
+        prompt: string;
+        icon: LucideIcon;
+      }
       | {
-          type: "separator";
-        }
+        type: "separator";
+      }
     )[];
   };
 
@@ -126,6 +126,63 @@ export interface Translations {
     chats: string;
     newChat: string;
     untitled: string;
+  };
+
+  // Landing
+  landing: {
+    header: {
+      starOnGithub: string;
+    };
+    hero: {
+      words: string[];
+      withDeerFlow: string;
+      descriptionLine1: string;
+      descriptionLine2: string;
+      descriptionLine3: string;
+      getStarted: string;
+    };
+    footer: {
+      quote: string;
+      license: string;
+    };
+    sections: {
+      caseStudies: {
+        title: string;
+        subtitle: string;
+        items: {
+          threadId: string;
+          title: string;
+          description: string;
+        }[];
+      };
+      skills: {
+        title: string;
+        subtitleLine1: string;
+        subtitleLine2: string;
+      };
+      sandbox: {
+        title: string;
+        subtitle: string;
+        openSource: string;
+        name: string;
+        description: string;
+        tags: string[];
+      };
+      whatsNew: {
+        title: string;
+        subtitle: string;
+        features: {
+          label: string;
+          title: string;
+          description: string;
+        }[];
+      };
+      community: {
+        title: string;
+        subtitle: string;
+        button: string;
+      };
+    };
   };
 
   // Tool calls

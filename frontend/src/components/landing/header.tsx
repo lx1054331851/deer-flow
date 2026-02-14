@@ -2,9 +2,14 @@ import { StarFilledIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 
 import { Button } from "@/components/ui/button";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { enUS, zhCN } from "@/core/i18n";
+import { detectLocaleServer } from "@/core/i18n/server";
 import { env } from "@/env";
 
-export function Header() {
+export async function Header() {
+  const locale = await detectLocaleServer();
+  const t = locale === "zh-CN" ? zhCN : enUS;
+
   return (
     <header className="container-md fixed top-0 right-0 left-0 z-20 mx-auto flex h-16 items-center justify-between backdrop-blur-xs">
       <div className="flex items-center gap-2">
@@ -28,7 +33,7 @@ export function Header() {
         >
           <a href="https://github.com/bytedance/deer-flow" target="_blank">
             <GitHubLogoIcon className="size-4" />
-            Star on GitHub
+            {t.landing.header.starOnGithub}
             {env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" &&
               env.GITHUB_OAUTH_TOKEN && <StarCounter />}
           </a>
@@ -48,9 +53,9 @@ async function StarCounter() {
       {
         headers: env.GITHUB_OAUTH_TOKEN
           ? {
-              Authorization: `Bearer ${env.GITHUB_OAUTH_TOKEN}`,
-              "Content-Type": "application/json",
-            }
+            Authorization: `Bearer ${env.GITHUB_OAUTH_TOKEN}`,
+            "Content-Type": "application/json",
+          }
           : {},
         next: {
           revalidate: 3600,

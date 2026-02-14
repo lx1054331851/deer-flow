@@ -5,20 +5,19 @@ import {
   Terminal,
   TypingAnimation,
 } from "@/components/ui/terminal";
+import { useI18n } from "@/core/i18n/hooks";
 
 import { Section } from "../section";
 
 export function SandboxSection({ className }: { className?: string }) {
+  const { t } = useI18n();
+
   return (
     <Section
       className={className}
-      title="Agent Runtime Environment"
+      title={t.landing.sections.sandbox.title}
       subtitle={
-        <p>
-          We give DeerFlow a &quot;computer&quot;, which can execute commands,
-          manage files, and run long tasks — all in a secure Docker-based
-          sandbox
-        </p>
+        <p>{t.landing.sections.sandbox.subtitle}</p>
       }
     >
       <div className="mt-8 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:gap-16">
@@ -72,7 +71,7 @@ export function SandboxSection({ className }: { className?: string }) {
         <div className="w-full flex-1 space-y-6">
           <div className="space-y-4">
             <p className="text-sm font-medium tracking-wider text-purple-400 uppercase">
-              Open-source
+              {t.landing.sections.sandbox.openSource}
             </p>
             <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
               <a
@@ -80,44 +79,25 @@ export function SandboxSection({ className }: { className?: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                AIO Sandbox
+                {t.landing.sections.sandbox.name}
               </a>
             </h2>
           </div>
 
           <div className="space-y-4 text-lg text-zinc-400">
-            <p>
-              We recommend using{" "}
-              <a
-                href="https://github.com/agent-infra/sandbox"
-                className="underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                All-in-One Sandbox
-              </a>{" "}
-              that combines Browser, Shell, File, MCP and VSCode Server in a
-              single Docker container.
-            </p>
+            <p>{t.landing.sections.sandbox.description}</p>
           </div>
 
           {/* Feature Tags */}
           <div className="flex flex-wrap gap-3 pt-4">
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300">
-              Isolated
-            </span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300">
-              Safe
-            </span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300">
-              Persistent
-            </span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300">
-              Mountable FS
-            </span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300">
-              Long-running
-            </span>
+            {t.landing.sections.sandbox.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
       </div>

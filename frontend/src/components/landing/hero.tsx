@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { FlickeringGrid } from "@/components/ui/flickering-grid";
 import Galaxy from "@/components/ui/galaxy";
 import { WordRotate } from "@/components/ui/word-rotate";
+import { useI18n } from "@/core/i18n/hooks";
 import { cn } from "@/lib/utils";
 
 export function Hero({ className }: { className?: string }) {
+  const { t } = useI18n();
+
   return (
     <div
       className={cn(
@@ -37,40 +40,21 @@ export function Hero({ className }: { className?: string }) {
       />
       <div className="container-md relative z-10 mx-auto flex h-screen flex-col items-center justify-center">
         <h1 className="flex items-center gap-2 text-4xl font-bold md:text-6xl">
-          <WordRotate
-            words={[
-              "Deep Research",
-              "Collect Data",
-              "Analyze Data",
-              "Generate Webpages",
-              "Vibe Coding",
-              "Generate Slides",
-              "Generate Images",
-              "Generate Podcasts",
-              "Generate Videos",
-              "Generate Songs",
-              "Organize Emails",
-              "Do Anything",
-              "Learn Anything",
-            ]}
-          />{" "}
-          <div>with DeerFlow</div>
+          <WordRotate words={t.landing.hero.words} /> <div>{t.landing.hero.withDeerFlow}</div>
         </h1>
         <p
           className="mt-8 scale-105 text-center text-2xl text-shadow-sm"
           style={{ color: "rgb(184,184,192)" }}
         >
-          An open-source SuperAgent harness that researches, codes, and creates.
-          With
+          {t.landing.hero.descriptionLine1}
           <br />
-          the help of sandboxes, memories, tools, skills and subagents, it
-          handles
+          {t.landing.hero.descriptionLine2}
           <br />
-          different levels of tasks that could take minutes to hours.
+          {t.landing.hero.descriptionLine3}
         </p>
         <Link href="/workspace">
           <Button className="size-lg mt-8 scale-108" size="lg">
-            <span className="text-md">Get Started with 2.0</span>
+            <span className="text-md">{t.landing.hero.getStarted}</span>
             <ChevronRightIcon className="size-4" />
           </Button>
         </Link>
