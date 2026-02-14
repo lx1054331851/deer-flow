@@ -185,10 +185,10 @@ DeerFlow 与模型解耦——凡是实现 OpenAI 兼容 API 的 LLM 都可使�
 
 ## 文档
 
-- [Contributing Guide](CONTRIBUTING.md) - 开发环境搭建与工作流
-- [Configuration Guide](backend/docs/CONFIGURATION.md) - 安装与配置说明
-- [Architecture Overview](backend/CLAUDE.md) - 技术架构概览
-- [Backend Architecture](backend/README.md) - 后端架构与 API 参考
+- [贡献指南](CONTRIBUTING.md) - 开发环境搭建与工作流
+- [配置指南](backend/docs/CONFIGURATION.md) - 安装与配置说明
+- [架构概览](backend/CLAUDE.md) - 技术架构概览
+- [后端架构](backend/README.md) - 后端架构与 API 参考
 
 ## 参与贡献
 

@@ -248,15 +248,15 @@ pnpm test
 
 ## 文档
 
-- [Configuration Guide](backend/docs/CONFIGURATION.md) - 安装与配置
-- [Architecture Overview](backend/CLAUDE.md) - 技术架构
-- [MCP Setup Guide](MCP_SETUP.md) - Model Context Protocol 配置
+- [配置指南](backend/docs/CONFIGURATION.md) - 安装与配置
+- [架构概览](backend/CLAUDE.md) - 技术架构
+- [MCP 配置指南](MCP_SETUP.md) - Model Context Protocol 配置
 
 ## 需要帮助？
 
-- 查看已有 [Issues](https://github.com/bytedance/deer-flow/issues)
-- 阅读 [Documentation](backend/docs/)
-- 在 [Discussions](https://github.com/bytedance/deer-flow/discussions) 中提问
+- 查看已有 [问题单](https://github.com/bytedance/deer-flow/issues)
+- 阅读 [文档](backend/docs/)
+- 在 [讨论区](https://github.com/bytedance/deer-flow/discussions) 中提问
 
 ## 许可证
 

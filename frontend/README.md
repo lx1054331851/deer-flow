@@ -1,130 +1,130 @@
-# DeerFlow Frontend
+# DeerFlow 前端
 
-Like the original DeerFlow 1.0, we would love to give the community a minimalistic and easy-to-use web interface with a more modern and flexible architecture.
+延续 DeerFlow 1.0 的理念，我们希望为社区提供一个极简易用、同时具备更现代与灵活架构的 Web 界面。
 
-## Tech Stack
+## 技术栈
 
-- **Framework**: [Next.js 16](https://nextjs.org/) with [App Router](https://nextjs.org/docs/app)
-- **UI**: [React 19](https://react.dev/), [Tailwind CSS 4](https://tailwindcss.com/), [Shadcn UI](https://ui.shadcn.com/), [MagicUI](https://magicui.design/) and [React Bits](https://reactbits.dev/)
-- **AI Integration**: [LangGraph SDK](https://www.npmjs.com/package/@langchain/langgraph-sdk) and [Vercel AI Elements](https://vercel.com/ai-sdk/ai-elements)
+- **框架**: [Next.js 16](https://nextjs.org/) + [App Router](https://nextjs.org/docs/app)
+- **UI**: [React 19](https://react.dev/)、[Tailwind CSS 4](https://tailwindcss.com/)、[Shadcn UI](https://ui.shadcn.com/)、[MagicUI](https://magicui.design/) 和 [React Bits](https://reactbits.dev/)
+- **AI 集成**: [LangGraph SDK](https://www.npmjs.com/package/@langchain/langgraph-sdk) 和 [Vercel AI Elements](https://vercel.com/ai-sdk/ai-elements)
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
+### 前置要求
 
 - Node.js 22+
 - pnpm 10.26.2+
 
-### Installation
+### 安装
 
 ```bash
-# Install dependencies
+# 安装依赖
 pnpm install
 
-# Copy environment variables
+# 复制环境变量文件
 cp .env.example .env
-# Edit .env with your configuration
+# 按你的配置编辑 .env
 ```
 
-### Development
+### 开发
 
 ```bash
-# Start development server
+# 启动开发服务器
 pnpm dev
 
-# The app will be available at http://localhost:3000
+# 应用访问地址：http://localhost:3000
 ```
 
-### Build
+### 构建
 
 ```bash
-# Type check
+# 类型检查
 pnpm typecheck
 
-# Lint
+# 代码检查
 pnpm lint
 
-# Build for production
+# 生产构建
 pnpm build
 
-# Start production server
+# 启动生产服务
 pnpm start
 ```
 
-## Site Map
+## 页面结构
 
 ```
-├── /                    # Landing page
-├── /chats               # Chat list
-├── /chats/new           # New chat page
-└── /chats/[thread_id]   # A specific chat page
+├── /                    # 落地页
+├── /chats               # 聊天列表
+├── /chats/new           # 新建聊天页
+└── /chats/[thread_id]   # 单个聊天页
 ```
 
-## Configuration
+## 配置
 
-### Environment Variables
+### 环境变量
 
-Key environment variables (see `.env.example` for full list):
+关键环境变量（完整列表见 `.env.example`）：
 
 ```bash
-# Backend API URLs (optional, uses nginx proxy by default)
+# 后端 API 地址（可选，默认使用 nginx 代理）
 NEXT_PUBLIC_BACKEND_BASE_URL="http://localhost:8001"
-# LangGraph API URLs (optional, uses nginx proxy by default)
+# LangGraph API 地址（可选，默认使用 nginx 代理）
 NEXT_PUBLIC_LANGGRAPH_BASE_URL="http://localhost:2024"
 ```
 
-## Project Structure
+## 项目结构
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── api/                # API routes
-│   ├── workspace/          # Main workspace pages
-│   └── mock/               # Mock/demo pages
-├── components/             # React components
-│   ├── ui/                 # Reusable UI components
-│   ├── workspace/          # Workspace-specific components
-│   ├── landing/            # Landing page components
-│   └── ai-elements/        # AI-related UI elements
-├── core/                   # Core business logic
-│   ├── api/                # API client & data fetching
-│   ├── artifacts/          # Artifact management
-│   ├── config/              # App configuration
-│   ├── i18n/               # Internationalization
-│   ├── mcp/                # MCP integration
-│   ├── messages/           # Message handling
-│   ├── models/             # Data models & types
-│   ├── settings/           # User settings
-│   ├── skills/             # Skills system
-│   ├── threads/            # Thread management
-│   ├── todos/              # Todo system
-│   └── utils/              # Utility functions
-├── hooks/                  # Custom React hooks
-├── lib/                    # Shared libraries & utilities
-├── server/                 # Server-side code (Not available yet)
-│   └── better-auth/        # Authentication setup (Not available yet)
-└── styles/                 # Global styles
+├── app/                    # Next.js App Router 页面
+│   ├── api/                # API 路由
+│   ├── workspace/          # 主工作区页面
+│   └── mock/               # Mock/演示页面
+├── components/             # React 组件
+│   ├── ui/                 # 可复用 UI 组件
+│   ├── workspace/          # 工作区专用组件
+│   ├── landing/            # 落地页组件
+│   └── ai-elements/        # AI 相关 UI 元素
+├── core/                   # 核心业务逻辑
+│   ├── api/                # API 客户端与数据请求
+│   ├── artifacts/          # 产物管理
+│   ├── config/             # 应用配置
+│   ├── i18n/               # 国际化
+│   ├── mcp/                # MCP 集成
+│   ├── messages/           # 消息处理
+│   ├── models/             # 数据模型与类型
+│   ├── settings/           # 用户设置
+│   ├── skills/             # Skills 系统
+│   ├── threads/            # 线程管理
+│   ├── todos/              # Todo 系统
+│   └── utils/              # 工具函数
+├── hooks/                  # 自定义 React hooks
+├── lib/                    # 共享库与工具
+├── server/                 # 服务端代码（暂未启用）
+│   └── better-auth/        # 认证配置（暂未启用）
+└── styles/                 # 全局样式
 ```
 
-## Scripts
+## 脚本命令
 
-| Command | Description |
+| 命令 | 说明 |
 |---------|-------------|
-| `pnpm dev` | Start development server with Turbopack |
-| `pnpm build` | Build for production |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint |
-| `pnpm lint:fix` | Fix ESLint issues |
-| `pnpm typecheck` | Run TypeScript type checking |
-| `pnpm check` | Run both lint and typecheck |
+| `pnpm dev` | 使用 Turbopack 启动开发服务器 |
+| `pnpm build` | 生产构建 |
+| `pnpm start` | 启动生产服务 |
+| `pnpm lint` | 运行 ESLint |
+| `pnpm lint:fix` | 自动修复 ESLint 问题 |
+| `pnpm typecheck` | 运行 TypeScript 类型检查 |
+| `pnpm check` | 同时运行 lint 与 typecheck |
 
-## Development Notes
+## 开发说明
 
-- Uses pnpm workspaces (see `packageManager` in package.json)
-- Turbopack enabled by default in development for faster builds
-- Environment validation can be skipped with `SKIP_ENV_VALIDATION=1` (useful for Docker)
-- Backend API URLs are optional; nginx proxy is used by default in development
+- 使用 pnpm workspaces（见 `package.json` 中的 `packageManager`）
+- 开发环境默认启用 Turbopack 以加速构建
+- 可用 `SKIP_ENV_VALIDATION=1` 跳过环境变量校验（Docker 下常用）
+- 后端 API 地址配置为可选；开发时默认走 nginx 代理
 
-## License
+## 许可证
 
-MIT License. See [LICENSE](../LICENSE) for details.
+本项目采用 MIT License。详见 [LICENSE](../LICENSE)。
