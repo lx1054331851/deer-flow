@@ -30,8 +30,8 @@ import { env } from "@/env";
 import { SettingsSection } from "./settings-section";
 
 export function SkillSettingsPage({ onClose }: { onClose?: () => void } = {}) {
-  const { t } = useI18n();
-  const { skills, isLoading, error } = useSkills();
+  const { t, locale } = useI18n();
+  const { skills, isLoading, error } = useSkills(locale);
   return (
     <SettingsSection
       title={t.settings.skills.title}
