@@ -2,8 +2,16 @@ import { getBackendBaseURL } from "@/core/config";
 
 import type { Skill } from "./type";
 
-export async function loadSkills() {
-  const skills = await fetch(`${getBackendBaseURL()}/api/skills`);
+export async function loadSkills(locale?: string) {
+  const params = new URLSearchParams();
+  if (locale) {
+    params.set("locale", locale);
+  }
+
+  const query = params.toString();
+  const url = `${getBackendBaseURL()}/api/skills${query ? `?${query}` : ""}`;
+
+  const skills = await fetch(url);
   const json = await skills.json();
   return json.skills as Skill[];
 }

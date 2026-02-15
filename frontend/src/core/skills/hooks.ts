@@ -4,10 +4,10 @@ import { enableSkill } from "./api";
 
 import { loadSkills } from ".";
 
-export function useSkills() {
+export function useSkills(locale?: string) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["skills"],
-    queryFn: () => loadSkills(),
+    queryKey: ["skills", locale ?? "default"],
+    queryFn: () => loadSkills(locale),
   });
   return { skills: data ?? [], isLoading, error };
 }

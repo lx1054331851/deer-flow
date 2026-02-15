@@ -1,8 +1,12 @@
 import re
+import logging
 from urllib.parse import urljoin
 
 from markdownify import markdownify as md
 from readabilipy import simple_json_from_html_string
+
+
+logger = logging.getLogger(__name__)
 
 
 class Article:
@@ -53,7 +57,13 @@ class Article:
 
 class ReadabilityExtractor:
     def extract_article(self, html: str) -> Article:
-        article = simple_json_from_html_string(html, use_readability=True)
+        try:
+            article = simple_json_from_html_string(html, use_readability=True)
+        except Exception as exc:
+            logger.warning(
+                "Readability.js extraction failed, fallback to python parser: %s", exc
+            )
+            article = simple_json_from_html_string(html, use_readability=False)
 
         html_content = article.get("content")
         if not html_content or not str(html_content).strip():

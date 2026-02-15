@@ -15,18 +15,27 @@ from src.config.summarization_config import load_summarization_config_from_dict
 from src.config.title_config import load_title_config_from_dict
 from src.config.tool_config import ToolConfig, ToolGroupConfig
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class AppConfig(BaseModel):
     """Config for the DeerFlow application"""
 
-    models: list[ModelConfig] = Field(default_factory=list, description="Available models")
+    models: list[ModelConfig] = Field(
+        default_factory=list, description="Available models"
+    )
     sandbox: SandboxConfig = Field(description="Sandbox configuration")
     tools: list[ToolConfig] = Field(default_factory=list, description="Available tools")
-    tool_groups: list[ToolGroupConfig] = Field(default_factory=list, description="Available tool groups")
-    skills: SkillsConfig = Field(default_factory=SkillsConfig, description="Skills configuration")
-    extensions: ExtensionsConfig = Field(default_factory=ExtensionsConfig, description="Extensions configuration (MCP servers and skills state)")
+    tool_groups: list[ToolGroupConfig] = Field(
+        default_factory=list, description="Available tool groups"
+    )
+    skills: SkillsConfig = Field(
+        default_factory=SkillsConfig, description="Skills configuration"
+    )
+    extensions: ExtensionsConfig = Field(
+        default_factory=ExtensionsConfig,
+        description="Extensions configuration (MCP servers and skills state)",
+    )
     model_config = ConfigDict(extra="allow", frozen=False)
 
     @classmethod
@@ -41,12 +50,16 @@ class AppConfig(BaseModel):
         if config_path:
             path = Path(config_path)
             if not Path.exists(path):
-                raise FileNotFoundError(f"Config file specified by param `config_path` not found at {path}")
+                raise FileNotFoundError(
+                    f"Config file specified by param `config_path` not found at {path}"
+                )
             return path
         elif os.getenv("DEER_FLOW_CONFIG_PATH"):
             path = Path(os.getenv("DEER_FLOW_CONFIG_PATH"))
             if not Path.exists(path):
-                raise FileNotFoundError(f"Config file specified by environment variable `DEER_FLOW_CONFIG_PATH` not found at {path}")
+                raise FileNotFoundError(
+                    f"Config file specified by environment variable `DEER_FLOW_CONFIG_PATH` not found at {path}"
+                )
             return path
         else:
             # Check if the config.yaml is in the current directory
@@ -55,7 +68,9 @@ class AppConfig(BaseModel):
                 # Check if the config.yaml is in the parent directory of CWD
                 path = Path(os.getcwd()).parent / "config.yaml"
                 if not path.exists():
-                    raise FileNotFoundError("`config.yaml` file not found at the current directory nor its parent directory")
+                    raise FileNotFoundError(
+                        "`config.yaml` file not found at the current directory nor its parent directory"
+                    )
             return path
 
     @classmethod

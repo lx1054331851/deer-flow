@@ -7,10 +7,15 @@ import zipfile
 from pathlib import Path
 
 import yaml
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.config.extensions_config import ExtensionsConfig, SkillStateConfig, get_extensions_config, reload_extensions_config
+from src.config.extensions_config import (
+    ExtensionsConfig,
+    SkillStateConfig,
+    get_extensions_config,
+    reload_extensions_config,
+)
 from src.gateway.path_utils import resolve_thread_virtual_path
 from src.skills import Skill, load_skills
 from src.skills.loader import get_skills_root_path
@@ -44,8 +49,13 @@ class SkillUpdateRequest(BaseModel):
 class SkillInstallRequest(BaseModel):
     """Request model for installing a skill from a .skill file."""
 
-    thread_id: str = Field(..., description="The thread ID where the .skill file is located")
-    path: str = Field(..., description="Virtual path to the .skill file (e.g., mnt/user-data/outputs/my-skill.skill)")
+    thread_id: str = Field(
+        ..., description="The thread ID where the .skill file is located"
+    )
+    path: str = Field(
+        ...,
+        description="Virtual path to the .skill file (e.g., mnt/user-data/outputs/my-skill.skill)",
+    )
 
 
 class SkillInstallResponse(BaseModel):
@@ -57,7 +67,13 @@ class SkillInstallResponse(BaseModel):
 
 
 # Allowed properties in SKILL.md frontmatter
-ALLOWED_FRONTMATTER_PROPERTIES = {"name", "description", "license", "allowed-tools", "metadata"}
+ALLOWED_FRONTMATTER_PROPERTIES = {
+    "name",
+    "description",
+    "license",
+    "allowed-tools",
+    "metadata",
+}
 
 
 def _validate_skill_frontmatter(skill_dir: Path) -> tuple[bool, str, str | None]:
@@ -95,7 +111,11 @@ def _validate_skill_frontmatter(skill_dir: Path) -> tuple[bool, str, str | None]
     # Check for unexpected properties
     unexpected_keys = set(frontmatter.keys()) - ALLOWED_FRONTMATTER_PROPERTIES
     if unexpected_keys:
-        return False, f"Unexpected key(s) in SKILL.md frontmatter: {', '.join(sorted(unexpected_keys))}", None
+        return (
+            False,
+            f"Unexpected key(s) in SKILL.md frontmatter: {', '.join(sorted(unexpected_keys))}",
+            None,
+        )
 
     # Check required fields
     if "name" not in frontmatter:
@@ -113,22 +133,42 @@ def _validate_skill_frontmatter(skill_dir: Path) -> tuple[bool, str, str | None]
 
     # Check naming convention (hyphen-case: lowercase with hyphens)
     if not re.match(r"^[a-z0-9-]+$", name):
-        return False, f"Name '{name}' should be hyphen-case (lowercase letters, digits, and hyphens only)", None
+        return (
+            False,
+            f"Name '{name}' should be hyphen-case (lowercase letters, digits, and hyphens only)",
+            None,
+        )
     if name.startswith("-") or name.endswith("-") or "--" in name:
-        return False, f"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens", None
+        return (
+            False,
+            f"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens",
+            None,
+        )
     if len(name) > 64:
-        return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters.", None
+        return (
+            False,
+            f"Name is too long ({len(name)} characters). Maximum is 64 characters.",
+            None,
+        )
 
     # Validate description
     description = frontmatter.get("description", "")
     if not isinstance(description, str):
-        return False, f"Description must be a string, got {type(description).__name__}", None
+        return (
+            False,
+            f"Description must be a string, got {type(description).__name__}",
+            None,
+        )
     description = description.strip()
     if description:
         if "<" in description or ">" in description:
             return False, "Description cannot contain angle brackets (< or >)", None
         if len(description) > 1024:
-            return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters.", None
+            return (
+                False,
+                f"Description is too long ({len(description)} characters). Maximum is 1024 characters.",
+                None,
+            )
 
     return True, "Skill is valid!", name
 
@@ -144,13 +184,60 @@ def _skill_to_response(skill: Skill) -> SkillResponse:
     )
 
 
+def _extract_description_from_skill_file(skill_file: Path) -> str | None:
+    """Extract description field from skill frontmatter.
+
+    Returns None if file is missing or frontmatter is invalid.
+    """
+    if not skill_file.exists():
+        return None
+
+    try:
+        content = skill_file.read_text(encoding="utf-8")
+        if not content.startswith("---"):
+            return None
+
+        match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+        if not match:
+            return None
+
+        frontmatter = yaml.safe_load(match.group(1))
+        if not isinstance(frontmatter, dict):
+            return None
+
+        description = frontmatter.get("description")
+        if isinstance(description, str) and description.strip():
+            return description.strip()
+        return None
+    except Exception:
+        return None
+
+
+def _get_localized_description(skill: Skill, locale: str | None) -> str:
+    """Get localized skill description for UI display.
+
+    Important: This only affects API response display text. It does NOT change
+    skill.skill_file nor the SKILL.md path used by agent runtime.
+    """
+    if not locale:
+        return skill.description
+
+    normalized = locale.strip()
+    if not normalized:
+        return skill.description
+
+    localized_skill_file = skill.skill_dir / f"SKILL.{normalized}.md"
+    localized_description = _extract_description_from_skill_file(localized_skill_file)
+    return localized_description or skill.description
+
+
 @router.get(
     "/skills",
     response_model=SkillsListResponse,
     summary="List All Skills",
     description="Retrieve a list of all available skills from both public and custom directories.",
 )
-async def list_skills() -> SkillsListResponse:
+async def list_skills(locale: str | None = Query(default=None)) -> SkillsListResponse:
     """List all available skills.
 
     Returns all skills regardless of their enabled status.
@@ -183,7 +270,12 @@ async def list_skills() -> SkillsListResponse:
     try:
         # Load all skills (including disabled ones)
         skills = load_skills(enabled_only=False)
-        return SkillsListResponse(skills=[_skill_to_response(skill) for skill in skills])
+        responses: list[SkillResponse] = []
+        for skill in skills:
+            response = _skill_to_response(skill)
+            response.description = _get_localized_description(skill, locale)
+            responses.append(response)
+        return SkillsListResponse(skills=responses)
     except Exception as e:
         logger.error(f"Failed to load skills: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to load skills: {str(e)}")
@@ -195,7 +287,9 @@ async def list_skills() -> SkillsListResponse:
     summary="Get Skill Details",
     description="Retrieve detailed information about a specific skill by its name.",
 )
-async def get_skill(skill_name: str) -> SkillResponse:
+async def get_skill(
+    skill_name: str, locale: str | None = Query(default=None)
+) -> SkillResponse:
     """Get a specific skill by name.
 
     Args:
@@ -223,9 +317,13 @@ async def get_skill(skill_name: str) -> SkillResponse:
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
-            raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Skill '{skill_name}' not found"
+            )
 
-        return _skill_to_response(skill)
+        response = _skill_to_response(skill)
+        response.description = _get_localized_description(skill, locale)
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -279,14 +377,18 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
-            raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Skill '{skill_name}' not found"
+            )
 
         # Get or create config path
         config_path = ExtensionsConfig.resolve_config_path()
         if config_path is None:
             # Create new config file in parent directory (project root)
             config_path = Path.cwd().parent / "extensions_config.json"
-            logger.info(f"No existing extensions config found. Creating new config at: {config_path}")
+            logger.info(
+                f"No existing extensions config found. Creating new config at: {config_path}"
+            )
 
         # Load current configuration
         extensions_config = get_extensions_config()
@@ -296,8 +398,14 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
 
         # Convert to JSON format (preserve MCP servers config)
         config_data = {
-            "mcpServers": {name: server.model_dump() for name, server in extensions_config.mcp_servers.items()},
-            "skills": {name: {"enabled": skill_config.enabled} for name, skill_config in extensions_config.skills.items()},
+            "mcpServers": {
+                name: server.model_dump()
+                for name, server in extensions_config.mcp_servers.items()
+            },
+            "skills": {
+                name: {"enabled": skill_config.enabled}
+                for name, skill_config in extensions_config.skills.items()
+            },
         }
 
         # Write the configuration to file
@@ -314,7 +422,10 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
         updated_skill = next((s for s in skills if s.name == skill_name), None)
 
         if updated_skill is None:
-            raise HTTPException(status_code=500, detail=f"Failed to reload skill '{skill_name}' after update")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to reload skill '{skill_name}' after update",
+            )
 
         logger.info(f"Skill '{skill_name}' enabled status updated to {request.enabled}")
         return _skill_to_response(updated_skill)
@@ -375,19 +486,27 @@ async def install_skill(request: SkillInstallRequest) -> SkillInstallResponse:
 
         # Check if file exists
         if not skill_file_path.exists():
-            raise HTTPException(status_code=404, detail=f"Skill file not found: {request.path}")
+            raise HTTPException(
+                status_code=404, detail=f"Skill file not found: {request.path}"
+            )
 
         # Check if it's a file
         if not skill_file_path.is_file():
-            raise HTTPException(status_code=400, detail=f"Path is not a file: {request.path}")
+            raise HTTPException(
+                status_code=400, detail=f"Path is not a file: {request.path}"
+            )
 
         # Check file extension
         if not skill_file_path.suffix == ".skill":
-            raise HTTPException(status_code=400, detail="File must have .skill extension")
+            raise HTTPException(
+                status_code=400, detail="File must have .skill extension"
+            )
 
         # Verify it's a valid ZIP file
         if not zipfile.is_zipfile(skill_file_path):
-            raise HTTPException(status_code=400, detail="File is not a valid ZIP archive")
+            raise HTTPException(
+                status_code=400, detail="File is not a valid ZIP archive"
+            )
 
         # Get the custom skills directory
         skills_root = get_skills_root_path()
@@ -422,21 +541,32 @@ async def install_skill(request: SkillInstallRequest) -> SkillInstallResponse:
                 raise HTTPException(status_code=400, detail=f"Invalid skill: {message}")
 
             if not skill_name:
-                raise HTTPException(status_code=400, detail="Could not determine skill name")
+                raise HTTPException(
+                    status_code=400, detail="Could not determine skill name"
+                )
 
             # Check if skill already exists
             target_dir = custom_skills_dir / skill_name
             if target_dir.exists():
-                raise HTTPException(status_code=409, detail=f"Skill '{skill_name}' already exists. Please remove it first or use a different name.")
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Skill '{skill_name}' already exists. Please remove it first or use a different name.",
+                )
 
             # Move the skill directory to the custom skills directory
             shutil.copytree(skill_dir, target_dir)
 
         logger.info(f"Skill '{skill_name}' installed successfully to {target_dir}")
-        return SkillInstallResponse(success=True, skill_name=skill_name, message=f"Skill '{skill_name}' installed successfully")
+        return SkillInstallResponse(
+            success=True,
+            skill_name=skill_name,
+            message=f"Skill '{skill_name}' installed successfully",
+        )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to install skill: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to install skill: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to install skill: {str(e)}"
+        )
