@@ -7,7 +7,7 @@ import { getLocaleFromCookie, setLocaleInCookie } from "./cookies";
 import { enUS } from "./locales/en-US";
 import { zhCN } from "./locales/zh-CN";
 
-import { detectLocale, type Locale, type Translations } from "./index";
+import { type Locale, type Translations } from "./index";
 
 const translations: Record<Locale, Translations> = {
   "en-US": enUS,
@@ -28,9 +28,8 @@ export function useI18n() {
   useEffect(() => {
     const saved = getLocaleFromCookie() as Locale | null;
     if (!saved) {
-      const detected = detectLocale();
-      setLocale(detected);
-      setLocaleInCookie(detected);
+      setLocale("zh-CN");
+      setLocaleInCookie("zh-CN");
     }
   }, [setLocale]);
 
