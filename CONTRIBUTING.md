@@ -209,6 +209,26 @@ Nginx (port 2026) ← 统一入口
 
 ## 开发工作流
 
+### 分支策略（Fork 仓库推荐）
+
+- `main` 仅用于同步上游，不直接进行业务开发。
+- 所有功能开发、修复、实验都在功能分支完成。
+
+先同步 `main`：
+
+```bash
+git checkout main
+git fetch upstream
+git merge upstream/main
+git push origin main
+```
+
+再从最新 `main` 创建功能分支：
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
 1. **创建功能分支**：
    ```bash
    git checkout -b feature/your-feature-name
@@ -251,6 +271,7 @@ pnpm test
 - [配置指南](backend/docs/CONFIGURATION.md) - 安装与配置
 - [架构概览](backend/CLAUDE.md) - 技术架构
 - [MCP 配置指南](MCP_SETUP.md) - Model Context Protocol 配置
+- [Fork 同步上游指南](docs/FORK_SYNC_UPSTREAM.md) - 同步上游与冲突处理
 
 ## 需要帮助？
 
