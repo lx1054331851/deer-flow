@@ -2,8 +2,18 @@
 
 DeerFlow（**D**eep **E**xploration and **E**fficient **R**esearch **Flow**）是一个开源的**超级 Agent Harness（编排运行框架）**，通过**可扩展技能**驱动，协调**子代理**、**记忆**与**沙箱**，几乎可以完成任何任务。
 
+https://github.com/user-attachments/assets/a8bcadc4-e040-4cf2-8fda-dd768b999c18
+
 > [!NOTE]
 > **DeerFlow 2.0 是一次从零开始的重写。**它与 v1 不共享任何代码。如果你在寻找最初的 Deep Research 框架，请前往仍在维护的 [`1.x` 分支](https://github.com/bytedance/deer-flow/tree/main-1.x)——我们依然欢迎在该分支上的贡献。当前活跃开发已迁移至 2.0。
+
+## 官方网站
+
+了解更多并查看**真实演示**：
+
+**[deerflow.tech](https://deerflow.tech/)**
+
+---
 
 ## 目录
 
