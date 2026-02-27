@@ -147,9 +147,9 @@ setup-sandbox:
 # Start all services
 dev:
 	@echo "Stopping existing services if any..."
-	@-pkill -f "langgraph dev" 2>/dev/null || true
-	@-pkill -f "uvicorn src.gateway.app:app" 2>/dev/null || true
-	@-pkill -f "next dev" 2>/dev/null || true
+	@-for pid in $$(pgrep -f "langgraph dev" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
+	@-for pid in $$(pgrep -f "uvicorn src.gateway.app:app" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
+	@-for pid in $$(pgrep -f "next dev" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
 	@-nginx -c $(PWD)/docker/nginx/nginx.local.conf -p $(PWD) -s quit 2>/dev/null || true
 	@sleep 1
 	@-pkill -9 nginx 2>/dev/null || true
@@ -166,14 +166,23 @@ dev:
 	@echo "  → Nginx: Reverse Proxy"
 	@echo ""
 	@cleanup() { \
+		if [ "$$CLEANING_UP" = "1" ]; then return; fi; \
+		CLEANING_UP=1; \
+		trap - INT TERM; \
 		echo ""; \
 		echo "Shutting down services..."; \
-		pkill -f "langgraph dev" 2>/dev/null || true; \
-		pkill -f "uvicorn src.gateway.app:app" 2>/dev/null || true; \
-		pkill -f "next dev" 2>/dev/null || true; \
+		for pid in "$$NGINX_PID" "$$FRONTEND_PID" "$$GATEWAY_PID" "$$LANGGRAPH_PID"; do \
+			if [ -n "$$pid" ] && kill -0 "$$pid" 2>/dev/null; then \
+				kill "$$pid" 2>/dev/null || true; \
+			fi; \
+		done; \
 		nginx -c $(PWD)/docker/nginx/nginx.local.conf -p $(PWD) -s quit 2>/dev/null || true; \
 		sleep 1; \
-		pkill -9 nginx 2>/dev/null || true; \
+		for pid in "$$NGINX_PID" "$$FRONTEND_PID" "$$GATEWAY_PID" "$$LANGGRAPH_PID"; do \
+			if [ -n "$$pid" ] && kill -0 "$$pid" 2>/dev/null; then \
+				kill -9 "$$pid" 2>/dev/null || true; \
+			fi; \
+		done; \
 		echo "Cleaning up sandbox containers..."; \
 		./scripts/cleanup-containers.sh deer-flow-sandbox 2>/dev/null || true; \
 		echo "✓ All services stopped"; \
@@ -183,23 +192,37 @@ dev:
 	mkdir -p logs; \
 	echo "Starting LangGraph server..."; \
 	cd backend && NO_COLOR=1 uv run langgraph dev --no-browser --allow-blocking --no-reload > ../logs/langgraph.log 2>&1 & \
+	LANGGRAPH_PID=$$!; \
 	sleep 3; \
 	echo "✓ LangGraph server started on localhost:2024"; \
 	echo "Starting Gateway API..."; \
 	cd backend && uv run uvicorn src.gateway.app:app --host 0.0.0.0 --port 8001 > ../logs/gateway.log 2>&1 & \
-	sleep 3; \
-	if ! lsof -i :8001 -sTCP:LISTEN -t >/dev/null 2>&1; then \
-		echo "✗ Gateway API failed to start. Last log output:"; \
-		tail -30 logs/gateway.log; \
-		cleanup; \
-	fi; \
+	GATEWAY_PID=$$!; \
+	MAX_WAIT=180; \
+	ELAPSED=0; \
+	until lsof -i :8001 -sTCP:LISTEN -t >/dev/null 2>&1; do \
+		if ! kill -0 "$$GATEWAY_PID" 2>/dev/null; then \
+			echo "✗ Gateway API process exited before listening. Last log output:"; \
+			tail -30 logs/gateway.log; \
+			cleanup; \
+		fi; \
+		if [ "$$ELAPSED" -ge "$$MAX_WAIT" ]; then \
+			echo "✗ Gateway API start timeout ($$MAX_WAIT s). Last log output:"; \
+			tail -30 logs/gateway.log; \
+			cleanup; \
+		fi; \
+		sleep 2; \
+		ELAPSED=$$((ELAPSED + 2)); \
+	done; \
 	echo "✓ Gateway API started on localhost:8001"; \
 	echo "Starting Frontend..."; \
 	cd frontend && pnpm run dev > ../logs/frontend.log 2>&1 & \
+	FRONTEND_PID=$$!; \
 	sleep 3; \
 	echo "✓ Frontend started on localhost:3000"; \
 	echo "Starting Nginx reverse proxy..."; \
 	mkdir -p logs && nginx -g 'daemon off;' -c $(PWD)/docker/nginx/nginx.local.conf -p $(PWD) > logs/nginx.log 2>&1 & \
+	NGINX_PID=$$!; \
 	sleep 2; \
 	echo "✓ Nginx started on localhost:2026"; \
 	echo ""; \
@@ -219,14 +242,14 @@ dev:
 	echo ""; \
 	echo "Press Ctrl+C to stop all services"; \
 	echo ""; \
-	wait
+	wait "$$LANGGRAPH_PID" "$$GATEWAY_PID" "$$FRONTEND_PID" "$$NGINX_PID"
 
 # Stop all services
 stop:
 	@echo "Stopping all services..."
-	@-pkill -f "langgraph dev" 2>/dev/null || true
-	@-pkill -f "uvicorn src.gateway.app:app" 2>/dev/null || true
-	@-pkill -f "next dev" 2>/dev/null || true
+	@-for pid in $$(pgrep -f "langgraph dev" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
+	@-for pid in $$(pgrep -f "uvicorn src.gateway.app:app" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
+	@-for pid in $$(pgrep -f "next dev" 2>/dev/null || true); do [ "$$pid" -ne "$$$$" ] && kill "$$pid" 2>/dev/null || true; done
 	@-nginx -c $(PWD)/docker/nginx/nginx.local.conf -p $(PWD) -s quit 2>/dev/null || true
 	@sleep 1
 	@-pkill -9 nginx 2>/dev/null || true
