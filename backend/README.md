@@ -143,7 +143,6 @@ cd deer-flow
 
 # 复制配置文件
 cp config.example.yaml config.yaml
-cp extensions_config.example.json extensions_config.json
 
 # 安装后端依赖
 cd backend

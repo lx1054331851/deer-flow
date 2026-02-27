@@ -38,7 +38,6 @@
 ```bash
 # 在项目根目录
 cp config.example.yaml config.yaml
-cp extensions_config.example.json extensions_config.json
 
 # 安装后端依赖
 cd backend

@@ -1,15 +1,15 @@
-# DeerFlow 沙箱 Provisioner
+# DeerFlow Sandbox Provisioner
 
-**Sandbox Provisioner** 是一个基于 FastAPI 的服务，用于在 Kubernetes 中动态管理沙箱 Pod。它向 DeerFlow 后端提供 REST API，以创建、监控和销毁用于代码执行的隔离沙箱环境。
+The **Sandbox Provisioner** is a FastAPI service that dynamically manages sandbox Pods in Kubernetes. It provides a REST API for the DeerFlow backend to create, monitor, and destroy isolated sandbox environments for code execution.
 
-## 架构
+## Architecture
 
 ```
 ┌────────────┐  HTTP  ┌─────────────┐  K8s API  ┌──────────────┐
 │  Backend   │ ─────▸ │ Provisioner │ ────────▸ │  Host K8s    │
 │  (gateway/ │        │   :8002     │           │  API Server  │
 │ langgraph) │        └─────────────┘           └──────┬───────┘
-└────────────┘                                          │ 创建
+└────────────┘                                          │ creates
                                                         │
                           ┌─────────────┐         ┌────▼─────┐
                           │   Backend   │ ──────▸ │  Sandbox │
@@ -18,45 +18,45 @@
                           └─────────────┘
 ```
 
-### 工作流程
+### How It Works
 
-1. **后端请求**：当后端需要执行代码时，会发送 `POST /api/sandboxes` 请求，并携带 `sandbox_id` 与 `thread_id`。
+1. **Backend Request**: When the backend needs to execute code, it sends a `POST /api/sandboxes` request with a `sandbox_id` and `thread_id`.
 
-2. **创建 Pod**：Provisioner 在 `deer-flow` 命名空间创建专用 Pod，包含：
-   - 沙箱容器镜像（all-in-one-sandbox）
-   - 挂载 HostPath 卷：
-     - `/mnt/skills` → 只读访问公共技能
-     - `/mnt/user-data` → 可读写访问线程数据
-   - 资源限制（CPU、内存、临时存储）
-   - 就绪/存活探针
+2. **Pod Creation**: The provisioner creates a dedicated Pod in the `deer-flow` namespace with:
+   - The sandbox container image (all-in-one-sandbox)
+   - HostPath volumes mounted for:
+     - `/mnt/skills` → Read-only access to public skills
+     - `/mnt/user-data` → Read-write access to thread-specific data
+   - Resource limits (CPU, memory, ephemeral storage)
+   - Readiness/liveness probes
 
-3. **创建 Service**：创建 NodePort Service 暴露 Pod，Kubernetes 自动分配 NodePort（通常范围 30000-32767）。
+3. **Service Creation**: A NodePort Service is created to expose the Pod, with Kubernetes auto-allocating a port from the NodePort range (typically 30000-32767).
 
-4. **返回访问地址**：Provisioner 向后端返回 `http://host.docker.internal:{NodePort}`，后端容器可直接访问。
+4. **Access URL**: The provisioner returns `http://host.docker.internal:{NodePort}` to the backend, which the backend containers can reach directly.
 
-5. **清理**：会话结束后，`DELETE /api/sandboxes/{sandbox_id}` 删除对应 Pod 与 Service。
+5. **Cleanup**: When the session ends, `DELETE /api/sandboxes/{sandbox_id}` removes both the Pod and Service.
 
-## 运行要求
+## Requirements
 
-宿主机需有可用 Kubernetes 集群（Docker Desktop K8s、OrbStack、minikube、kind 等）。
+Host machine with a running Kubernetes cluster (Docker Desktop K8s, OrbStack, minikube, kind, etc.)
 
-### 在 Docker Desktop 中启用 Kubernetes
-1. 打开 Docker Desktop 设置
-2. 进入 “Kubernetes” 标签
-3. 勾选 “Enable Kubernetes”
-4. 点击 “Apply & Restart”
+### Enable Kubernetes in Docker Desktop
+1. Open Docker Desktop settings
+2. Go to "Kubernetes" tab
+3. Check "Enable Kubernetes"
+4. Click "Apply & Restart"
 
-### 在 OrbStack 中启用 Kubernetes
-1. 打开 OrbStack 设置
-2. 进入 “Kubernetes” 标签
-3. 勾选 “Enable Kubernetes”
+### Enable Kubernetes in OrbStack
+1. Open OrbStack settings
+2. Go to "Kubernetes" tab
+3. Check "Enable Kubernetes"
 
-## API 端点
+## API Endpoints
 
 ### `GET /health`
-健康检查端点。
+Health check endpoint.
 
-**响应**：
+**Response**:
 ```json
 {
   "status": "ok"
@@ -64,9 +64,9 @@
 ```
 
 ### `POST /api/sandboxes`
-创建新的沙箱 Pod + Service。
+Create a new sandbox Pod + Service.
 
-**请求**：
+**Request**:
 ```json
 {
   "sandbox_id": "abc-123",
@@ -74,7 +74,7 @@
 }
 ```
 
-**响应**：
+**Response**:
 ```json
 {
   "sandbox_id": "abc-123",
@@ -83,12 +83,12 @@
 }
 ```
 
-**幂等性**：对同一 `sandbox_id` 重复调用会返回已存在沙箱信息。
+**Idempotent**: Calling with the same `sandbox_id` returns the existing sandbox info.
 
 ### `GET /api/sandboxes/{sandbox_id}`
-获取指定沙箱状态与 URL。
+Get status and URL of a specific sandbox.
 
-**响应**：
+**Response**:
 ```json
 {
   "sandbox_id": "abc-123",
@@ -97,12 +97,12 @@
 }
 ```
 
-**状态值**：`Pending`、`Running`、`Succeeded`、`Failed`、`Unknown`、`NotFound`
+**Status Values**: `Pending`, `Running`, `Succeeded`, `Failed`, `Unknown`, `NotFound`
 
 ### `DELETE /api/sandboxes/{sandbox_id}`
-销毁沙箱 Pod + Service。
+Destroy a sandbox Pod + Service.
 
-**响应**：
+**Response**:
 ```json
 {
   "ok": true,
@@ -111,9 +111,9 @@
 ```
 
 ### `GET /api/sandboxes`
-列出当前由 Provisioner 管理的全部沙箱。
+List all sandboxes currently managed.
 
-**响应**：
+**Response**:
 ```json
 {
   "sandboxes": [
@@ -127,192 +127,204 @@
 }
 ```
 
-## 配置
+## Configuration
 
-Provisioner 通过环境变量配置（定义在 [docker-compose-dev.yaml](../docker-compose-dev.yaml)）：
+The provisioner is configured via environment variables (set in [docker-compose-dev.yaml](../docker-compose-dev.yaml)):
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Description |
 |----------|---------|-------------|
-| `K8S_NAMESPACE` | `deer-flow` | 沙箱资源所在 Kubernetes 命名空间 |
-| `SANDBOX_IMAGE` | `enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:latest` | 沙箱 Pod 使用的容器镜像 |
-| `SKILLS_HOST_PATH` | - | **宿主机**技能目录路径（必须为绝对路径） |
-| `THREADS_HOST_PATH` | - | **宿主机**线程数据目录路径（必须为绝对路径） |
-| `KUBECONFIG_PATH` | `/root/.kube/config` | Provisioner 容器内 kubeconfig 路径 |
-| `NODE_HOST` | `host.docker.internal` | 后端容器访问宿主机 NodePort 的主机名 |
-| `K8S_API_SERVER` | （来自 kubeconfig） | 覆盖 K8s API Server 地址（例如 `https://host.docker.internal:26443`） |
+| `K8S_NAMESPACE` | `deer-flow` | Kubernetes namespace for sandbox resources |
+| `SANDBOX_IMAGE` | `enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:latest` | Container image for sandbox Pods |
+| `SKILLS_HOST_PATH` | - | **Host machine** path to skills directory (must be absolute) |
+| `THREADS_HOST_PATH` | - | **Host machine** path to threads data directory (must be absolute) |
+| `KUBECONFIG_PATH` | `/root/.kube/config` | Path to kubeconfig **inside** the provisioner container |
+| `NODE_HOST` | `host.docker.internal` | Hostname that backend containers use to reach host NodePorts |
+| `K8S_API_SERVER` | (from kubeconfig) | Override K8s API server URL (e.g., `https://host.docker.internal:26443`) |
 
-### 重要：`K8S_API_SERVER` 覆盖
+### Important: K8S_API_SERVER Override
 
-如果你的 kubeconfig 使用 `localhost`、`127.0.0.1` 或 `0.0.0.0` 作为 API Server 地址（OrbStack/minikube/kind 常见），Provisioner 在 Docker 容器内将**无法**访问。
+If your kubeconfig uses `localhost`, `127.0.0.1`, or `0.0.0.0` as the API server address (common with OrbStack, minikube, kind), the provisioner **cannot** reach it from inside the Docker container. 
 
-**解决方案**：将 `K8S_API_SERVER` 设为 `host.docker.internal`：
+**Solution**: Set `K8S_API_SERVER` to use `host.docker.internal`:
 
 ```yaml
 # docker-compose-dev.yaml
 provisioner:
   environment:
-    - K8S_API_SERVER=https://host.docker.internal:26443  # 将 26443 替换为你的 API 端口
+    - K8S_API_SERVER=https://host.docker.internal:26443  # Replace 26443 with your API port
 ```
 
-查看 kubeconfig 的 API Server：
+Check your kubeconfig API server:
 ```bash
 kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'
 ```
 
-## 前置条件
+## Prerequisites
 
-### 宿主机要求
+### Host Machine Requirements
 
-1. **Kubernetes 集群**：
-   - Docker Desktop（开启 Kubernetes），或
-   - OrbStack（内置 K8s），或
-   - minikube、kind、k3s 等。
+1. **Kubernetes Cluster**: 
+   - Docker Desktop with Kubernetes enabled, or
+   - OrbStack (built-in K8s), or
+   - minikube, kind, k3s, etc.
 
-2. **kubectl 已配置**：
-   - `~/.kube/config` 必须存在且有效
-   - 当前 context 应指向本地集群
+2. **kubectl Configured**:
+   - `~/.kube/config` must exist and be valid
+   - Current context should point to your local cluster
 
-3. **Kubernetes 权限**：
-   - Provisioner 需要有权限：
-     - 在 `deer-flow` 命名空间创建/读取/删除 Pod
-     - 在 `deer-flow` 命名空间创建/读取/删除 Service
-     - 读取 Namespace（缺失时可创建 `deer-flow`）
+3. **Kubernetes Access**:
+   - The provisioner needs permissions to:
+     - Create/read/delete Pods in the `deer-flow` namespace
+     - Create/read/delete Services in the `deer-flow` namespace
+     - Read Namespaces (to create `deer-flow` if missing)
 
-4. **Host 路径**：
-   - `SKILLS_HOST_PATH` 与 `THREADS_HOST_PATH` 必须是**宿主机绝对路径**
-   - 这些路径会通过 K8s HostPath 卷挂载到沙箱 Pod
-   - 路径必须存在且 K8s 节点可读
+4. **Host Paths**:
+   - The `SKILLS_HOST_PATH` and `THREADS_HOST_PATH` must be **absolute paths on the host machine**
+   - These paths are mounted into sandbox Pods via K8s HostPath volumes
+   - The paths must exist and be readable by the K8s node
 
-### Docker Compose 部署
+### Docker Compose Setup
 
-Provisioner 作为 docker-compose-dev 栈的一部分运行：
+The provisioner runs as part of the docker-compose-dev stack:
 
 ```bash
-# 启动全部服务（含 provisioner）
+# Start Docker services (provisioner starts only when config.yaml enables provisioner mode)
 make docker-start
 
-# 或仅启动 provisioner
+# Or start just the provisioner
 docker compose -p deer-flow-dev -f docker/docker-compose-dev.yaml up -d provisioner
 ```
 
-Compose 文件会：
-- 将宿主机 `~/.kube/config` 挂载进容器
-- 为 `host.docker.internal` 增加 `extra_hosts`（Linux 必需）
-- 配置 Kubernetes 访问所需环境变量
+The compose file:
+- Mounts your host's `~/.kube/config` into the container
+- Adds `extra_hosts` entry for `host.docker.internal` (required on Linux)
+- Configures environment variables for K8s access
 
-## 测试
+## Testing
 
-### 手动 API 测试
+### Manual API Testing
 
 ```bash
-# 健康检查
+# Health check
 curl http://localhost:8002/health
 
-# 创建沙箱（通过 provisioner 容器调用，便于使用内部 DNS）
+# Create a sandbox (via provisioner container for internal DNS)
 docker exec deer-flow-provisioner curl -X POST http://localhost:8002/api/sandboxes \
   -H "Content-Type: application/json" \
   -d '{"sandbox_id":"test-001","thread_id":"thread-001"}'
 
-# 查看沙箱状态
+# Check sandbox status
 docker exec deer-flow-provisioner curl http://localhost:8002/api/sandboxes/test-001
 
-# 列出全部沙箱
+# List all sandboxes
 docker exec deer-flow-provisioner curl http://localhost:8002/api/sandboxes
 
-# 在 K8s 中验证 Pod 和 Service
+# Verify Pod and Service in K8s
 kubectl get pod,svc -n deer-flow -l sandbox-id=test-001
 
-# 删除沙箱
+# Delete sandbox
 docker exec deer-flow-provisioner curl -X DELETE http://localhost:8002/api/sandboxes/test-001
 ```
 
-### 在后端容器中验证连通性
+### Verify from Backend Containers
 
-创建沙箱后，后端容器（gateway、langgraph）应可访问该沙箱：
+Once a sandbox is created, the backend containers (gateway, langgraph) can access it:
 
 ```bash
-# 从 provisioner 获取沙箱 URL
+# Get sandbox URL from provisioner
 SANDBOX_URL=$(docker exec deer-flow-provisioner curl -s http://localhost:8002/api/sandboxes/test-001 | jq -r .sandbox_url)
 
-# 在 gateway 容器中测试
+# Test from gateway container
 docker exec deer-flow-gateway curl -s $SANDBOX_URL/v1/sandbox
 ```
 
-## 故障排查
+## Troubleshooting
 
-### 问题："Kubeconfig not found"
+### Issue: "Kubeconfig not found"
 
-**原因**：挂载路径上不存在 kubeconfig 文件。
+**Cause**: The kubeconfig file doesn't exist at the mounted path.
 
-**解决**：
-- 确认宿主机存在 `~/.kube/config`
-- 运行 `kubectl config view` 验证配置
-- 检查 `docker-compose-dev.yaml` 的卷挂载配置
+**Solution**: 
+- Ensure `~/.kube/config` exists on your host machine
+- Run `kubectl config view` to verify
+- Check the volume mount in docker-compose-dev.yaml
 
-### 问题：连接 K8s API 时 "Connection refused"
+### Issue: "Kubeconfig path is a directory"
 
-**原因**：Provisioner 无法访问 K8s API Server。
+**Cause**: The mounted `KUBECONFIG_PATH` points to a directory instead of a file.
 
-**解决**：
-1. 检查 kubeconfig 的 server 地址：
+**Solution**:
+- Ensure the compose mount source is a file (e.g., `~/.kube/config`) not a directory
+- Verify inside container:
+  ```bash
+  docker exec deer-flow-provisioner ls -ld /root/.kube/config
+  ```
+- Expected output should indicate a regular file (`-`), not a directory (`d`)
+
+### Issue: "Connection refused" to K8s API
+
+**Cause**: The provisioner can't reach the K8s API server.
+
+**Solution**:
+1. Check your kubeconfig server address:
    ```bash
    kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'
    ```
-2. 若为 `localhost` 或 `127.0.0.1`，配置 `K8S_API_SERVER`：
+2. If it's `localhost` or `127.0.0.1`, set `K8S_API_SERVER`:
    ```yaml
    environment:
      - K8S_API_SERVER=https://host.docker.internal:PORT
    ```
 
-### 问题：创建 Pod 时 "Unprocessable Entity"
+### Issue: "Unprocessable Entity" when creating Pod
 
-**原因**：HostPath 路径非法（例如带 `..` 的相对路径）。
+**Cause**: HostPath volumes contain invalid paths (e.g., relative paths with `..`).
 
-**解决**：
-- `SKILLS_HOST_PATH` 与 `THREADS_HOST_PATH` 使用绝对路径
-- 验证宿主机路径存在：
+**Solution**: 
+- Use absolute paths for `SKILLS_HOST_PATH` and `THREADS_HOST_PATH`
+- Verify the paths exist on your host machine:
   ```bash
   ls -la /path/to/skills
   ls -la /path/to/backend/.deer-flow/threads
   ```
 
-### 问题：Pod 卡在 "ContainerCreating"
+### Issue: Pod stuck in "ContainerCreating"
 
-**原因**：通常是沙箱镜像拉取中。
+**Cause**: Usually pulling the sandbox image from the registry.
 
-**解决**：
-- 预拉取镜像：`make docker-init`
-- 查看 Pod 事件：`kubectl describe pod sandbox-XXX -n deer-flow`
-- 检查节点状态：`kubectl get nodes`
+**Solution**:
+- Pre-pull the image: `make docker-init`
+- Check Pod events: `kubectl describe pod sandbox-XXX -n deer-flow`
+- Check node: `kubectl get nodes`
 
-### 问题：后端无法访问 sandbox URL
+### Issue: Cannot access sandbox URL from backend
 
-**原因**：NodePort 不可达或 `NODE_HOST` 配置错误。
+**Cause**: NodePort not reachable or `NODE_HOST` misconfigured.
 
-**解决**：
-- 验证 Service 存在：`kubectl get svc -n deer-flow`
-- 在宿主机测试：`curl http://localhost:NODE_PORT/v1/sandbox`
-- 确认 docker-compose 已配置 `extra_hosts`（Linux）
-- 检查 `NODE_HOST` 是否与后端访问宿主机的方式一致
+**Solution**:
+- Verify the Service exists: `kubectl get svc -n deer-flow`
+- Test from host: `curl http://localhost:NODE_PORT/v1/sandbox`
+- Ensure `extra_hosts` is set in docker-compose (Linux)
+- Check `NODE_HOST` env var matches how backend reaches host
 
-## 安全注意事项
+## Security Considerations
 
-1. **HostPath 卷**：Provisioner 会把宿主机目录挂载到沙箱 Pod，请确保这些路径仅包含可信数据。
+1. **HostPath Volumes**: The provisioner mounts host directories into sandbox Pods. Ensure these paths contain only trusted data.
 
-2. **资源限制**：每个沙箱 Pod 都有 CPU、内存与存储限制，防止资源耗尽。
+2. **Resource Limits**: Each sandbox Pod has CPU, memory, and storage limits to prevent resource exhaustion.
 
-3. **网络隔离**：沙箱 Pod 在 `deer-flow` 命名空间运行，但通过 NodePort 暴露。若需更严格隔离，请配置 NetworkPolicy。
+3. **Network Isolation**: Sandbox Pods run in the `deer-flow` namespace but share the host's network namespace via NodePort. Consider NetworkPolicies for stricter isolation.
 
-4. **kubeconfig 访问权限**：Provisioner 通过挂载 kubeconfig 拥有集群访问能力，请仅在可信环境运行。
+4. **kubeconfig Access**: The provisioner has full access to your Kubernetes cluster via the mounted kubeconfig. Run it only in trusted environments.
 
-5. **镜像可信性**：沙箱镜像应来自可信镜像仓库，建议审计镜像内容。
+5. **Image Trust**: The sandbox image should come from a trusted registry. Review and audit the image contents.
 
-## 后续增强
+## Future Enhancements
 
-- [ ] 支持按沙箱自定义资源 request/limit
-- [ ] 支持 PersistentVolume 以满足更大数据需求
-- [ ] 自动清理过期沙箱（基于超时）
-- [ ] 指标与监控（Prometheus 集成）
-- [ ] 多集群支持（路由至不同 K8s 集群）
-- [ ] Pod 亲和/反亲和策略优化调度
-- [ ] 提供 NetworkPolicy 模板实现沙箱隔离
+- [ ] Support for custom resource requests/limits per sandbox
+- [ ] PersistentVolume support for larger data requirements
+- [ ] Automatic cleanup of stale sandboxes (timeout-based)
+- [ ] Metrics and monitoring (Prometheus integration)
+- [ ] Multi-cluster support (route to different K8s clusters)
+- [ ] Pod affinity/anti-affinity rules for better placement
+- [ ] NetworkPolicy templates for sandbox isolation

@@ -17,23 +17,6 @@ from src.subagents.executor import SubagentStatus, get_background_task_result
 
 logger = logging.getLogger(__name__)
 
-MIN_SUBAGENT_MAX_TURNS = 12
-
-
-def _format_task_failure(error: str | None, max_turns: int) -> str:
-    if not error:
-        return "Task failed. Error: Unknown error"
-
-    if "Recursion limit of" in error:
-        return (
-            "Task failed: 子代理在达到递归/步数上限前未收敛。"
-            f" 当前 max_turns={max_turns}。"
-            " 建议提高 `max_turns`（例如 20-50）或拆分任务后重试。"
-            f" 原始错误: {error}"
-        )
-
-    return f"Task failed. Error: {error}"
-
 
 @tool("task", parse_docstring=True)
 def task_tool(
@@ -87,14 +70,7 @@ def task_tool(
         overrides["system_prompt"] = config.system_prompt + "\n\n" + skills_section
 
     if max_turns is not None:
-        safe_max_turns = max(MIN_SUBAGENT_MAX_TURNS, max_turns)
-        if safe_max_turns != max_turns:
-            logger.warning(
-                "task_tool max_turns=%s is too low, clamped to %s",
-                max_turns,
-                safe_max_turns,
-            )
-        overrides["max_turns"] = safe_max_turns
+        overrides["max_turns"] = max_turns
 
     if overrides:
         config = replace(config, **overrides)
@@ -139,14 +115,15 @@ def task_tool(
     # Start background execution (always async to prevent blocking)
     # Use tool_call_id as task_id for better traceability
     task_id = executor.execute_async(prompt, task_id=tool_call_id)
-    logger.info(
-        f"[trace={trace_id}] Started background task {task_id}, polling for completion..."
-    )
 
     # Poll for task completion in backend (removes need for LLM to poll)
     poll_count = 0
     last_status = None
     last_message_count = 0  # Track how many AI messages we've already sent
+    # Polling timeout: execution timeout + 60s buffer, checked every 5s
+    max_poll_count = (config.timeout_seconds + 60) // 5
+
+    logger.info(f"[trace={trace_id}] Started background task {task_id} (subagent={subagent_type}, timeout={config.timeout_seconds}s, polling_limit={max_poll_count} polls)")
 
     writer = get_stream_writer()
     # Send Task Started message'
@@ -156,23 +133,13 @@ def task_tool(
         result = get_background_task_result(task_id)
 
         if result is None:
-            logger.error(
-                f"[trace={trace_id}] Task {task_id} not found in background tasks"
-            )
-            writer(
-                {
-                    "type": "task_failed",
-                    "task_id": task_id,
-                    "error": "Task disappeared from background tasks",
-                }
-            )
+            logger.error(f"[trace={trace_id}] Task {task_id} not found in background tasks")
+            writer({"type": "task_failed", "task_id": task_id, "error": "Task disappeared from background tasks"})
             return f"Error: Task {task_id} disappeared from background tasks"
 
         # Log status changes for debugging
         if result.status != last_status:
-            logger.info(
-                f"[trace={trace_id}] Task {task_id} status: {result.status.value}"
-            )
+            logger.info(f"[trace={trace_id}] Task {task_id} status: {result.status.value}")
             last_status = result.status
 
         # Check for new AI messages and send task_running events
@@ -190,31 +157,21 @@ def task_tool(
                         "total_messages": current_message_count,
                     }
                 )
-                logger.info(
-                    f"[trace={trace_id}] Task {task_id} sent message #{i + 1}/{current_message_count}"
-                )
+                logger.info(f"[trace={trace_id}] Task {task_id} sent message #{i + 1}/{current_message_count}")
             last_message_count = current_message_count
 
         # Check if task completed, failed, or timed out
         if result.status == SubagentStatus.COMPLETED:
-            writer(
-                {"type": "task_completed", "task_id": task_id, "result": result.result}
-            )
-            logger.info(
-                f"[trace={trace_id}] Task {task_id} completed after {poll_count} polls"
-            )
+            writer({"type": "task_completed", "task_id": task_id, "result": result.result})
+            logger.info(f"[trace={trace_id}] Task {task_id} completed after {poll_count} polls")
             return f"Task Succeeded. Result: {result.result}"
         elif result.status == SubagentStatus.FAILED:
             writer({"type": "task_failed", "task_id": task_id, "error": result.error})
             logger.error(f"[trace={trace_id}] Task {task_id} failed: {result.error}")
-            return _format_task_failure(result.error, config.max_turns)
+            return f"Task failed. Error: {result.error}"
         elif result.status == SubagentStatus.TIMED_OUT:
-            writer(
-                {"type": "task_timed_out", "task_id": task_id, "error": result.error}
-            )
-            logger.warning(
-                f"[trace={trace_id}] Task {task_id} timed out: {result.error}"
-            )
+            writer({"type": "task_timed_out", "task_id": task_id, "error": result.error})
+            logger.warning(f"[trace={trace_id}] Task {task_id} timed out: {result.error}")
             return f"Task timed out. Error: {result.error}"
 
         # Still running, wait before next poll
@@ -222,11 +179,10 @@ def task_tool(
         poll_count += 1
 
         # Polling timeout as a safety net (in case thread pool timeout doesn't work)
-        # Set to 16 minutes (longer than the default 15-minute thread pool timeout)
+        # Set to execution timeout + 60s buffer, in 5s poll intervals
         # This catches edge cases where the background task gets stuck
-        if poll_count > 192:  # 192 * 5s = 16 minutes
-            logger.error(
-                f"[trace={trace_id}] Task {task_id} polling timed out after {poll_count} polls (should have been caught by thread pool timeout)"
-            )
+        if poll_count > max_poll_count:
+            timeout_minutes = config.timeout_seconds // 60
+            logger.error(f"[trace={trace_id}] Task {task_id} polling timed out after {poll_count} polls (should have been caught by thread pool timeout)")
             writer({"type": "task_timed_out", "task_id": task_id})
-            return f"Task polling timed out after 16 minutes. This may indicate the background task is stuck. Status: {result.status.value}"
+            return f"Task polling timed out after {timeout_minutes} minutes. This may indicate the background task is stuck. Status: {result.status.value}"
