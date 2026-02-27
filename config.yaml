@@ -130,6 +130,8 @@ tools:
     group: web
     use: src.community.tavily.tools:web_search_tool
     max_results: 5
+    retry_attempts: 3
+    retry_initial_delay_seconds: 0.8
     # api_key: $TAVILY_API_KEY  # Set if needed
 
   # Web fetch tool (uses Jina AI reader)

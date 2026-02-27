@@ -90,6 +90,8 @@ tools:
     use: src.community.tavily.tools:web_search_tool
     max_results: 5
     # api_key: $TAVILY_API_KEY  # 可选
+    # retry_attempts: 3
+    # retry_initial_delay_seconds: 0.8
 ```
 
   **内置工具**：
