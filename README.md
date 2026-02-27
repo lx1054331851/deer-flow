@@ -116,6 +116,56 @@ Docker 开发详细说明请参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 5. **访问**：http://localhost:2026
 
+#### 选项 3：本地开发（Windows 环境）
+
+Windows 下推荐使用 **WSL2 + Ubuntu** 运行本地开发环境（可完整支持 `make`、`bash`、`uv`、`nginx` 等依赖）。
+
+1. **启用 WSL 并安装 Ubuntu**（在管理员 PowerShell 中执行）：
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+   安装完成后重启系统，并按提示创建 Ubuntu 用户。
+
+2. **在 Ubuntu 中安装基础依赖**：
+   ```bash
+   sudo apt update
+   sudo apt install -y make nginx curl git
+   ```
+
+3. **安装 Node.js 22 与 pnpm**：
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+   sudo apt install -y nodejs
+   sudo npm install -g pnpm
+   ```
+
+4. **安装 uv**：
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source ~/.bashrc
+   ```
+
+5. **进入项目目录**（在 Ubuntu 终端）：
+   ```bash
+   cd /mnt/d/PycharmProjects/deer-flow
+   ```
+
+6. **初始化配置并检查依赖**：
+   ```bash
+   make config
+   make check
+   ```
+
+7. **安装依赖并启动服务**：
+   ```bash
+   make install
+   make dev
+   ```
+
+8. **访问应用**：http://localhost:2026
+
+如果你偏好容器化开发，也可以在 Windows 安装 Docker Desktop 后直接使用 [选项 1：Docker（推荐）](#选项-1docker推荐)。
+
 ## 从 Deep Research 到 Super Agent Harness
 
 DeerFlow 最初是一个 Deep Research 框架——而社区把它推向了更远。自发布以来，开发者将它应用到远超研究本身的场景：构建数据流水线、生成演示文稿、搭建仪表盘、自动化内容工作流……这些都超出了我们最初预期。

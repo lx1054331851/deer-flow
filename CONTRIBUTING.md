@@ -166,6 +166,56 @@ nginx 配置提供：
 - 支持 SSE/流式实时 Agent 响应
 - 针对长耗时操作优化超时配置
 
+### 选项 3：本地开发（Windows 环境）
+
+Windows 下推荐使用 **WSL2 + Ubuntu** 运行本地开发环境（可完整支持 `make`、`bash`、`uv`、`nginx` 等依赖）。
+
+1. **启用 WSL 并安装 Ubuntu**（在管理员 PowerShell 中执行）：
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+   安装完成后重启系统，并按提示创建 Ubuntu 用户。
+
+2. **在 Ubuntu 中安装基础依赖**：
+   ```bash
+   sudo apt update
+   sudo apt install -y make nginx curl git
+   ```
+
+3. **安装 Node.js 22 与 pnpm**：
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+   sudo apt install -y nodejs
+   sudo npm install -g pnpm
+   ```
+
+4. **安装 uv**：
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source ~/.bashrc
+   ```
+
+5. **进入项目目录**（在 Ubuntu 终端）：
+   ```bash
+   cd /mnt/d/PycharmProjects/deer-flow
+   ```
+
+6. **初始化配置并检查依赖**：
+   ```bash
+   make config
+   make check
+   ```
+
+7. **安装依赖并启动服务**：
+   ```bash
+   make install
+   make dev
+   ```
+
+8. **访问应用**：http://localhost:2026
+
+如果你偏好容器化开发，也可以在 Windows 安装 Docker Desktop 后直接使用上面的“选项 1：Docker 开发（推荐）”。
+
 ## 项目结构
 
 ```
